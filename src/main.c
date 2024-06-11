@@ -7,23 +7,24 @@ int _main()
 {
     initKernel();
     initLibc();
-    initPthread();
     initSysUtil();
     jailbreak();
 
     printf_debug("YorHa loaded!");
 
-    int pid = syscall(SYS_fork);
+    //
+    // detach
+    //
+    // int pid = getpid();
+    // syscall(SYS_fork);
 
-    if (getpid() == pid)
-    {
-        goto exit;
-    }
-
+    // if (getpid() == pid)
+    // {
+    //     goto exit;
+    // }
     //
     // Start kernel debugger
     //
-
     if (yorha_dbg_init())
     {
         printf_debug("Kernel Debugger enabled");

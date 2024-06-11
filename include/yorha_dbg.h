@@ -10,4 +10,4 @@ enum
 };
 
 int yorha_dbg_init();
-void display_idt_gates();
+void display_idt_gates(uint64_t* idt_base);
