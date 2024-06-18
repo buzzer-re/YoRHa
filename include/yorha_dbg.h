@@ -1,13 +1,15 @@
 #pragma once
 
-#include "ps4.h"
 #include "../include/intrin.h"
+#include "../include/kernel.h"
 
 enum 
 {
-    YORHA_FAILURE = 0,
-    YORHA_SUCCESS
+    YORHA_SUCCESS = 0,
+    YORHA_FAILURE,
 };
 
+#define LOG(msg, ...) kprintf("YorhaDBG: "msg"\n", __VA_ARGS__)
+
 int yorha_dbg_init();
-void display_idt_gates(uint64_t* idt_base);
+void overwrite_idt_gate(int interruption_number, uint64_t gate_addr);

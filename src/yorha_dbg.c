@@ -1,39 +1,61 @@
 #include "../include/yorha_dbg.h"
 
 
+void yorha_breakpoint_gate_handler()
+{
+    kprintf("breakpoint called");
+}
+
 //
-// Init the YorHa debugget, get the IDTR address, overwrite the Gate descriptors related to debugging
+// Init the YorHa debugger, get the IDTR address, overwrite the Gate descriptors related to debugging
 // Prepare initial structures for debugging over network
 //
-int yorha_dbg_init()
+int yorha_dbg_init(void*, void*)
 {
-    //
-    // Get IDT address
-    //
-    printf_debug("Getting IDT address...");
-
-    struct IDTR idtr;
-    __sidt(&idtr);
+    init_kernel();
     
-    printf_notification("IDT Base Address: 0x%p\n", idtr.base);
-    printf_debug("IDT Base Address: 0x%p\n", idtr.base);
+    //
+    // Apply custom IDT handlers
+    //
+    overwrite_idt_gate(3, &yorha_breakpoint_gate_handler);
 
-
-    display_idt_gates((uint64_t*) &idtr.base);
-
+    __asm__("int3");
     return YORHA_SUCCESS;
 }
 
-void display_idt_gates(uint64_t* idt_base)
+void overwrite_idt_gate(int interruption_number, uint64_t gate_addr)
 {
-    printf_notification("Listing...");
-    uint8_t* idt_entry = (uint8_t*) *idt_base;
-
-    for (int i = 0; i < 10; ++i)
-    {   
-        uint64_t* entry = (uint64_t*) idt_entry;
-        printf_debug("Gate address %d -> %p\n", i, entry);
-        idt_entry += 0x10 * i;
-    }
+    LOG("Patching gate %d with 0x%llx\n", interruption_number, gate_addr);
     
+    enable_safe_patch();
+
+    idtr idtr = { 0 };
+    idt_64* idt_array;
+    idt_64* idt_entry;
+    __sidt(&idtr);
+
+    LOG("Found IDT at %llx\n", idtr.base);
+
+    idt_array = (idt_64*) idtr.base;
+    idt_entry = (idt_64*) &idt_array[interruption_number];
+
+    LOG("Interruption %d (0x%llx) handler is at -> 0x%llx\n", interruption_number, idt_entry, UNPACK_HANDLER_ADDR(idt_entry));
+
+    idt_entry->offset_low     = (gate_addr & 0xFFFF);
+    idt_entry->offset_middle  = (gate_addr >> 16 ) & 0xFFFF;
+    idt_entry->offset_high    = (gate_addr >> 32 ) & 0xFFFFFFFF;
+
+    LOG("Interruption %d (0x%llx) handler is at -> 0x%llx\n", interruption_number, idt_entry, UNPACK_HANDLER_ADDR(idt_entry));
+
+    disable_safe_patch();
 }
+
+
+
+
+
+
+
+
+
+
