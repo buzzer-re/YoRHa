@@ -1,4 +1,4 @@
-#include "../include/yorha_dbg.h"
+#include "../include/yorha.h"
 
 int _main()
 {

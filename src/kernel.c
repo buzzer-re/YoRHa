@@ -2,8 +2,7 @@
 
 void (*critical_enter)();
 void (*critical_exit)();
-int (*kprintf)(const char *format, ...);
-
+int (*kprintf)(const char *format, ...) = (int(*)(const char *, ...)) NULL;
 uint8_t* kernel_base = 0;
 
 //
