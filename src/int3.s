@@ -2,7 +2,7 @@
 .global int_breakpoint_handler
 .extern yorha_dbg_breakpoint_handler
 
-.macro SAVE_GP
+.macro SAVE_GP_REGISTERS
     push rax
     push rcx
     push rdx
@@ -20,7 +20,7 @@
     push r15
 .endm
 
-.macro RESTORE_GP
+.macro RESTORE_GP_REGISTERS
     pop r15
     pop r14
     pop r13
@@ -42,11 +42,12 @@
 
 
 int_breakpoint_handler:
-    SAVE_GP
+    SAVE_GP_REGISTERS
     mov rdi, rsp
-    sub rsp, 0x20
+  //  sub rsp, 0x100
     call yorha_dbg_breakpoint_handler
-    RESTORE_GP
+  //  add rsp, 0x100
+    RESTORE_GP_REGISTERS
     iretq
 
 

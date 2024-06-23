@@ -11,6 +11,8 @@ enum
 };
 
 extern void (*int_breakpoint_handler)();
+extern uint64_t __get_rsp();
+extern uint64_t __get_rip();
 
 #define LOG(msg, ...) kprintf("YorhaDBG: "msg"\n", __VA_ARGS__)
 

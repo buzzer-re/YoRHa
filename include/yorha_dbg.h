@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include "../include/kernel.h"
 
-typedef struct _X64Registers
+typedef struct __trap_frame
 {
     uint64_t rax;
     uint64_t rcx;
@@ -18,7 +18,13 @@ typedef struct _X64Registers
     uint64_t r13;
     uint64_t r14;
     uint64_t r15;
-} X64Registers;
+    uint64_t error_code;
+    uint64_t rip;
+    uint64_t cs;
+    uint64_t eflags;
+    uint64_t rsp;
+    uint64_t ss;
+} trap_frame_ctx;
 
 
-void yorha_dbg_breakpoint_handler(X64Registers* registers);
+void yorha_dbg_breakpoint_handler(trap_frame_ctx* registers);

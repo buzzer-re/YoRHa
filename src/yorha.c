@@ -1,11 +1,5 @@
 #include "../include/yorha.h"
 
-
-void yorha_breakpoint_gate_handler(void* args)
-{
-    kprintf("Breakpoint called\n fuck it!");
-}
-
 //
 // Init the YorHa debugger, get the IDTR address, overwrite the Gate descriptors related to debugging
 // Prepare initial structures for debugging over network
@@ -17,9 +11,10 @@ int yorha_dbg_init(void*, void*)
     //
     // Apply custom IDT handlers
     //
-    overwrite_idt_gate(3, &int_breakpoint_handler);
+    overwrite_idt_gate(3, (uint64_t) &int_breakpoint_handler);
 
-    __asm__("int3");
+    // kprintf("Breaking, RSP: %p\nRIP: %p\n", __get_rsp(), __get_rip());
+    // __asm__("int3");
     return YORHA_SUCCESS;
 }
 
@@ -45,7 +40,7 @@ void overwrite_idt_gate(int interruption_number, uint64_t gate_addr)
     idt_entry->offset_middle  = (gate_addr >> 16 ) & 0xFFFF;
     idt_entry->offset_high    = (gate_addr >> 32 ) & 0xFFFFFFFF;
 
-    LOG("Interruption %d (0x%llx) handler is at -> 0x%llx\n", interruption_number, idt_entry, UNPACK_HANDLER_ADDR(idt_entry));
+    LOG("Interruption %d (0x%llx) handler now is at -> 0x%llx\n", interruption_number, idt_entry, UNPACK_HANDLER_ADDR(idt_entry));
 
     disable_safe_patch();
 }
