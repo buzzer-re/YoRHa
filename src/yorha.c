@@ -7,14 +7,19 @@
 int yorha_dbg_init(void*, void*)
 {
     init_kernel();
-    
+    kprintf("Kernel Base address: %p\n", kernel_base);
+
+    if (yorha_dbg_init_debug_server(8888) == YORHA_FAILURE)
+    {
+        kprintf("Unable to init YoRHdbg debug server! aborting...\n");
+        return YORHA_FAILURE;
+    }
     //
     // Apply custom IDT handlers
     //
     overwrite_idt_gate(3, (uint64_t) &int_breakpoint_handler);
 
-    // kprintf("Breaking, RSP: %p\nRIP: %p\n", __get_rsp(), __get_rip());
-    // __asm__("int3");
+    
     return YORHA_SUCCESS;
 }
 

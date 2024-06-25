@@ -3,6 +3,17 @@
 void (*critical_enter)();
 void (*critical_exit)();
 int (*kprintf)(const char *format, ...) = (int(*)(const char *, ...)) NULL;
+int (*kprintf)(const char *format, ...);
+int (*ksock_create)(void **socket, int domain, int type, int protocol);
+int (*ksock_close)(void *socket);
+int (*ksock_bind)(void *socket, struct sockaddr *addr);
+int (*ksock_recv)(void *socket, void *buf, size_t *len);
+int (*kproc_create)(void (*func)(void *), void *arg, struct proc **newpp, int flags, int pages, const char *fmt, ...);
+
+int (*ksys_socket)(struct thread* td, struct socket_args* uap);
+int (*ksys_bind)(struct thread* td, struct bind_args* uap);
+int (*ksys_recvfrom)(struct thread* td, struct recvfrom_args* uap);
+
 uint8_t* kernel_base = 0;
 
 //
@@ -13,13 +24,33 @@ uint8_t* kernel_base = 0;
 // 
 void init_kernel()
 {
-    kernel_base = &((uint8_t *)__readmsr(0xC0000082))[-0x000001C0];  
-	
-    critical_enter  = (void(*)()) &kernel_base[0x002C1980]; // critical_enter offset, from mira
-    critical_exit   = (void(*)()) &kernel_base[0x002C19A0]; // critical_exit offset, from mira
-	kprintf = (int(*)(const char *, ...)) ( (void*)((uint8_t *) (&kernel_base[0x000B7A30])));
+    if (kernel_base) return;
 
-    kprintf("[+] Kernel base: %p [+]\n", kernel_base);
+    kernel_base = load_kernel_base();
+    //
+    // Load kernel functions, syscalls and so on
+    // 
+    critical_enter  = (void(*)()) &kernel_base[critical_enter_offset]; // critical_enter offset, from mira
+    critical_exit   = (void(*)()) &kernel_base[critical_exit_offset]; // critical_exit offset, from mira
+	kprintf         = (int (*)(const char *format, ...)) (&kernel_base[kprintf_offset]);
+    ksock_create    = (int (*)(void **socket, int domain, int type, int protocol)) &kernel_base[ksock_create_offset];
+    ksock_close     = (int (*)(void *socket)) &kernel_base[ksock_close_offset];
+    ksock_bind      = (int (*)(void* socket, struct sockaddr *addr)) &kernel_base[ksock_bind_offset];
+    ksock_recv      = (int (*)(void *socket, void *buf, size_t *len)) &kernel_base[ksock_recv_offset];
+    kproc_create    = (int (*)(void (*func)(void *), void *arg, struct proc **newpp, int flags, int pages, const char *fmt, ...)) &kernel_base[kproc_create_offset];
+
+    //
+    // Load syscalls
+    //
+    ksys_socket      =  (int(*)(struct thread* td, struct socket_args* uap)) sysents[SYS_socket].sy_call;
+    ksys_bind        =  (int(*)(struct thread* td, struct bind_args* uap)) sysents[SYS_bind].sy_call;
+    ksys_recvfrom    =  (int(*)(struct thread* td, struct recvfrom_args* uap)) sysents[SYS_recvfrom].sy_call;
+}
+
+
+uint8_t* load_kernel_base()
+{
+    return &((uint8_t *)__readmsr(MSR_LSTAR))[-xfast_syscall_offset];  
 }
 
 

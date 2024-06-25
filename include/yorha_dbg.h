@@ -1,6 +1,13 @@
 #pragma once
 #include <stdint.h>
-#include "../include/kernel.h"
+#include <sys/proc.h>
+#include "kernel.h"
+#include "common.h"
+
+enum command_type
+{
+    CONTINUE = 0
+};
 
 typedef struct __trap_frame
 {
@@ -26,5 +33,19 @@ typedef struct __trap_frame
     uint64_t ss;
 } trap_frame_ctx;
 
+typedef struct __dbg_command_header
+{
+    enum command_type command_type;
+    uint64_t argument_size;
+} dbg_command_header;
+
+typedef struct __dbg_command
+{
+    dbg_command_header header;
+    uint8_t data[];
+} dbg_command;
+
+
 
 void yorha_dbg_breakpoint_handler(trap_frame_ctx* registers);
+int yorha_dbg_init_debug_server(int port);
