@@ -40,8 +40,4 @@ extern int (*kproc_create)(void (*func)(void *), void *arg, struct proc **newpp,
 extern int (*ksys_socket)(struct thread* td, struct socket_args* uap);
 extern int (*ksys_bind)(struct thread* td, struct bind_args* uap);
 extern int (*ksys_recvfrom)(struct thread* td, struct recvfrom_args* uap);
-
-// extern int (*ksock_create)(void **socket, int domain, int type, int protocol);
-// extern int (*ksock_close)(void *socket);
-// extern int (*ksock_bind)(void *socket, struct sockaddr *addr);
-// extern int (*ksock_recv)(void *socket, void *buf, size_t *len);
+extern int (*ksys_close)(struct thread* td, struct close_args* uap);

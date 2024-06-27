@@ -1,6 +1,6 @@
 #include "../include/yorha_dbg.h"
 
-void* sock;
+int sock;
 struct sockaddr_in sockaddr;
 
 void yorha_dbg_breakpoint_handler(trap_frame_ctx* ctx)
@@ -56,34 +56,30 @@ int yorha_dbg_init_debug_server(int port)
         return YORHA_FAILURE;
     }
 
-    //struct socket_args uap;
-    // if (ksock_create(&sock, AF_INET, SOCK_DGRAM, 0))
-    // {
-    //     kprintf("Unable to create socket!\n");
-    //     return YORHA_FAILURE;
-    // }
+    kprintf("Starting debug server, creating socket...\n");
+
+
+
+    sock = ksocket(AF_INET, SOCK_STREAM, 0, curthread);
     
-    // sockaddr.sin_len = sizeof(sockaddr);
-    // sockaddr.sin_family = AF_INET;
-    // sockaddr.sin_port = __builtin_bswap16(port);
-    // sockaddr.sin_addr.s_addr = 0; // in any addr
+    if (sock < 0)
+    {
+        kprintf("Unable to create socket!\n");
+        return YORHA_FAILURE;
+    } 
 
-    // if (ksock_bind(sock, (struct sockaddr*) &sockaddr))
-    // {
-    //     kprintf("Unable to bind on port %d!\n", port);
-    //     ksock_close(sock);
-    //     return YORHA_FAILURE;   
-    // }
+    kprintf("Socket created: %d\n", sock);
     
-    // // kproc_create(yorhda_dbg_cmd_handler, )
+    struct sockaddr_in sockaddr = {0};
+    sockaddr.sin_len = sizeof(sockaddr);
+    sockaddr.sin_family = AF_INET;
+    sockaddr.sin_port = __builtin_bswap16(port);
+    sockaddr.sin_addr.s_addr  = __builtin_bswap32(INADDR_ANY);
+    
+    // if (!kbind(soc, (struct sockaddr) sockaddr);
 
-    // kprintf("Socket created -> %p, listening something...\n", sock);
-    // char msg[0x100];
-    // size_t size_read = 0x100
-    // ksock_recv(sock, msg, &size_read);
+    kclose(sock, curthread);
 
-    // kprintf("Received %s\n", msg);
-
-    // ksock_close(sock);
+    
     return YORHA_SUCCESS;
 }

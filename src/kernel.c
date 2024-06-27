@@ -13,8 +13,10 @@ int (*kproc_create)(void (*func)(void *), void *arg, struct proc **newpp, int fl
 int (*ksys_socket)(struct thread* td, struct socket_args* uap);
 int (*ksys_bind)(struct thread* td, struct bind_args* uap);
 int (*ksys_recvfrom)(struct thread* td, struct recvfrom_args* uap);
+int (*ksys_close)(struct thread* td, struct close_args* uap);
 
 uint8_t* kernel_base = 0;
+struct sysent* sysents;
 
 //
 // Init kernel pointers
@@ -27,6 +29,7 @@ void init_kernel()
     if (kernel_base) return;
 
     kernel_base = load_kernel_base();
+    sysents     = (struct sysent*) &kernel_base[sysent_offset]; // load syscall table
     //
     // Load kernel functions, syscalls and so on
     // 
@@ -45,6 +48,7 @@ void init_kernel()
     ksys_socket      =  (int(*)(struct thread* td, struct socket_args* uap)) sysents[SYS_socket].sy_call;
     ksys_bind        =  (int(*)(struct thread* td, struct bind_args* uap)) sysents[SYS_bind].sy_call;
     ksys_recvfrom    =  (int(*)(struct thread* td, struct recvfrom_args* uap)) sysents[SYS_recvfrom].sy_call;
+    ksys_close       =  (int(*)(struct thread* td, struct close_args* uap)) sysents[SYS_close].sy_call;
 }
 
 

@@ -1,8 +1,12 @@
 #pragma once
 #include <stdint.h>
+#include <sys/types.h>
 #include <sys/proc.h>
+#define _KERNEL
+#include <sys/pcpu.h>
 #include "kernel.h"
 #include "common.h"
+#include "syscall_wrapper.h"
 
 enum command_type
 {
