@@ -4,9 +4,11 @@
 #include "firmware/offset.h"
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <sys/types.h>
 #include <sys/sysproto.h>
 #include <sys/syscall.h>
 #include <sys/sysent.h>
+#include <vm/vm.h>
 
 #define DISABLE_WP() \
         __asm__("cli");\
@@ -22,6 +24,8 @@ void enable_safe_patch();
 void disable_safe_patch();
 void disable_cr0_wp();
 void enable_cr0_wp();
+uint64_t* kalloc(size_t alloc_size);
+void kfree(uint64_t* data);
 
 
 extern uint8_t* kernel_base;
@@ -41,3 +45,7 @@ extern int (*ksys_socket)(struct thread* td, struct socket_args* uap);
 extern int (*ksys_bind)(struct thread* td, struct bind_args* uap);
 extern int (*ksys_recvfrom)(struct thread* td, struct recvfrom_args* uap);
 extern int (*ksys_close)(struct thread* td, struct close_args* uap);
+extern int (*ksys_recvfrom)(struct thread* td, struct recvfrom_args* uap);
+extern int (*ksys_read)(struct thread* td, struct read_args* uap);
+extern int (*ksys_accept)(struct thread* td, struct accept_args* uap);
+extern int (*ksys_listen)(struct thread* td, struct listen_args* uap);

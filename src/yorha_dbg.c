@@ -56,11 +56,8 @@ int yorha_dbg_init_debug_server(int port)
         return YORHA_FAILURE;
     }
 
-    kprintf("Starting debug server, creating socket...\n");
-
-
-
-    sock = ksocket(AF_INET, SOCK_STREAM, 0, curthread);
+    struct thread* td = curthread;
+    sock = ksocket(AF_INET, SOCK_STREAM, 0, td);
     
     if (sock < 0)
     {
@@ -68,18 +65,53 @@ int yorha_dbg_init_debug_server(int port)
         return YORHA_FAILURE;
     } 
 
-    kprintf("Socket created: %d\n", sock);
     
-    struct sockaddr_in sockaddr = {0};
-    sockaddr.sin_len = sizeof(sockaddr);
-    sockaddr.sin_family = AF_INET;
-    sockaddr.sin_port = __builtin_bswap16(port);
-    sockaddr.sin_addr.s_addr  = __builtin_bswap32(INADDR_ANY);
-    
-    // if (!kbind(soc, (struct sockaddr) sockaddr);
+    struct sockaddr_in* sockaddr = (struct sockaddr_in*) kalloc(sizeof(struct sockaddr_in));
+    if (!sockaddr)
+    {
+        kprintf("Unable to allocate sockaddr struct!\n");
+        return YORHA_FAILURE;
+    }
+    kprintf("Allocated sockaddr struct at %p\n", sockaddr);
 
-    kclose(sock, curthread);
-
+    socklen_t socklen = sizeof(sockaddr);
+    sockaddr->sin_len = socklen;
+    sockaddr->sin_family = AF_INET;
+    sockaddr->sin_port = __builtin_bswap16(port);
+    sockaddr->sin_addr.s_addr  = __builtin_bswap32(INADDR_ANY);
     
+    if (kbind(sock, (struct sockaddr*) sockaddr, socklen, td) < 0)
+    {
+        kprintf("Unable to bind socket %d on port %d\n", sock, port);
+        kclose(sock, td);
+        return YORHA_FAILURE;
+    }
+
+
+    if (klisten(sock, 4, td) < 0)
+    {
+        kprintf("Unable to listen socket %d on port %d\n",sock, port);
+        kclose(sock, td);
+        return YORHA_FAILURE;
+    }
+
+    //
+    // accept
+    //
+    kprintf("Socked bind on port %d, testing connections...\n", port);
+    char data[0x100] = {0};
+    
+    int conn = kaccept(sock, (struct sockaddr*) sockaddr, &socklen, td);
+
+    kprintf("Got connection %d, reading...\n", conn);
+
+    kread(conn, data, 0x100, td);
+    
+    kprintf("%s\n", data);
+
+    kprintf("\nClosing socket...\n");
+    kclose(sock, td);
+    kfree((uint64_t*) sockaddr);
+
     return YORHA_SUCCESS;
 }

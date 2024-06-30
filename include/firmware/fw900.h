@@ -10,3 +10,6 @@
 #define ksock_bind_offset       0x0041bda0
 #define ksock_recv_offset       0x0041c100
 #define kproc_create_offset     0x000969e0
+#define kmem_alloc_offset       0x0037BE70
+#define kmem_free_offset        0x0037C040
+#define kkernel_map_offset      0x02268d48

@@ -9,11 +9,13 @@ int yorha_dbg_init(void*, void*)
     init_kernel();
     kprintf("Kernel Base address: %p\n", kernel_base);
 
-    if (yorha_dbg_init_debug_server(8888) == YORHA_FAILURE)
+    if (yorha_dbg_init_debug_server(8888) != YORHA_SUCCESS)
     {
         kprintf("Unable to init YoRHdbg debug server! aborting...\n");
         return YORHA_FAILURE;
     }
+
+    kprintf("Debug server initiated, setting IDT debug handlers...\n");
     //
     // Apply custom IDT handlers
     //
