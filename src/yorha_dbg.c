@@ -1,7 +1,10 @@
 #include "../include/yorha_dbg.h"
 
-int sock;
+int sock = -1;
+enum DbgStatus dbg_status = IDLE;
 struct sockaddr_in sockaddr;
+int current_connection;
+struct thread* main_thread;
 
 void yorha_dbg_breakpoint_handler(trap_frame_ctx* ctx)
 {
@@ -49,16 +52,23 @@ void yorha_dbg_breakpoint_handler(trap_frame_ctx* ctx)
 }
 
 
-int yorha_dbg_init_debug_server(int port)
+//
+// Initialize the network debugger server
+//
+int yorha_dbg_run_debug_server_loop(int port)
 {
     if (!kernel_base)
     {
         return YORHA_FAILURE;
     }
-
-    struct thread* td = curthread;
-    sock = ksocket(AF_INET, SOCK_STREAM, 0, td);
     
+    uint8_t command_data[0x1000];
+    size_t cmd_size;
+    int conn;
+    struct thread* td = curthread;
+
+    sock = ksocket(AF_INET, SOCK_STREAM, 0, td);
+
     if (sock < 0)
     {
         kprintf("Unable to create socket!\n");
@@ -66,21 +76,14 @@ int yorha_dbg_init_debug_server(int port)
     } 
 
     
-    struct sockaddr_in* sockaddr = (struct sockaddr_in*) kalloc(sizeof(struct sockaddr_in));
-    if (!sockaddr)
-    {
-        kprintf("Unable to allocate sockaddr struct!\n");
-        return YORHA_FAILURE;
-    }
-    kprintf("Allocated sockaddr struct at %p\n", sockaddr);
-
+    struct sockaddr_in sockaddr;
     socklen_t socklen = sizeof(sockaddr);
-    sockaddr->sin_len = socklen;
-    sockaddr->sin_family = AF_INET;
-    sockaddr->sin_port = __builtin_bswap16(port);
-    sockaddr->sin_addr.s_addr  = __builtin_bswap32(INADDR_ANY);
+    sockaddr.sin_len = socklen;
+    sockaddr.sin_family = AF_INET;
+    sockaddr.sin_port = __builtin_bswap16(port);
+    sockaddr.sin_addr.s_addr  = __builtin_bswap32(INADDR_ANY);
     
-    if (kbind(sock, (struct sockaddr*) sockaddr, socklen, td) < 0)
+    if (kbind(sock, (struct sockaddr*) &sockaddr, socklen, td) < 0)
     {
         kprintf("Unable to bind socket %d on port %d\n", sock, port);
         kclose(sock, td);
@@ -95,23 +98,66 @@ int yorha_dbg_init_debug_server(int port)
         return YORHA_FAILURE;
     }
 
-    //
-    // accept
-    //
-    kprintf("Socked bind on port %d, testing connections...\n", port);
-    char data[0x100] = {0};
-    
-    int conn = kaccept(sock, (struct sockaddr*) sockaddr, &socklen, td);
+    dbg_status = RUNNING;    
+    if (sock >= 0)
+    {
+        while (dbg_status == RUNNING)
+        {
+            conn = kaccept(sock, NULL, NULL, td);
+            if (conn < 0)
+            {
+                kprintf("Error handling connection...\n");
+                break;
+            }
+            
+        read_data:
+            if ((cmd_size = kread(conn, command_data, 0x1000, td)) > 0)
+            {
+                dbg_command* command = (dbg_command*) command_data;
 
-    kprintf("Got connection %d, reading...\n", conn);
+                if (yorha_dbg_handle_command(command, conn) != STOP_DBG)
+                {
+                    kprintf("Waiting next commands...\n");
+                    goto read_data;
+                }
 
-    kread(conn, data, 0x100, td);
-    
-    kprintf("%s\n", data);
+                kprintf("Received STOP_DBG command from remote, closing connection...\n");
+            }
+            
+            kclose(conn, td);
+        } 
 
-    kprintf("\nClosing socket...\n");
-    kclose(sock, td);
-    kfree((uint64_t*) sockaddr);
+        kclose(sock, td);
+    }
 
+    return YORHA_SUCCESS;
+}
+
+int yorha_dbg_handle_command(dbg_command* command, int conn)
+{
+    if (command->header.command_type < __max_dbg_commands )
+    {
+        //
+        // Save the current thread pointer and connection, this will be used in the int3 handler
+        //
+        kprintf("Received command %d\n", command->header.command_type);
+        main_thread = curthread;
+        current_connection = conn;
+        command_handler handler = command_handlers[command->header.command_type];
+        return handler(command, conn);
+    }
+
+    kprintf("Invalid command received %d\n", command->header.command_type);
+    // ksend(conn, "invalid command", )
+    return YORHA_SUCCESS;
+}
+
+
+//
+// Launch the int3 in a separated kthread
+//
+int pause_kernel(dbg_command*, int)
+{
+    kproc_create(__debugbreak, 0, 0, 0, 0, "__debugbreak");
     return YORHA_SUCCESS;
 }

@@ -8,9 +8,27 @@
 #include "common.h"
 #include "syscall_wrapper.h"
 
-enum command_type
+enum command_type // TODO: Remove that one
 {
-    CONTINUE = 0
+    CONTINUE = 0,
+    STOP_DBG,
+    PAUSE_KERNEL,
+};
+
+enum response_type
+{
+    OK = 0,
+    FAIL,
+    BREAKPOINT, 
+    MEM_READ,
+};
+
+enum DbgStatus
+{
+    IDLE = 0,
+    RUNNING,
+    STOPPED,
+    ERROR
 };
 
 typedef struct __trap_frame
@@ -43,13 +61,34 @@ typedef struct __dbg_command_header
     uint64_t argument_size;
 } dbg_command_header;
 
+typedef struct __dbg_response_header
+{
+    enum response_type command_type;
+    uint64_t response_size;
+} dbg_response_header;
+
 typedef struct __dbg_command
 {
     dbg_command_header header;
     uint8_t data[];
 } dbg_command;
 
+typedef struct __dbg_response
+{
+    dbg_response_header header;
+    uint8_t data[];
+} dbg_response;
+
 
 
 void yorha_dbg_breakpoint_handler(trap_frame_ctx* registers);
-int yorha_dbg_init_debug_server(int port);
+int yorha_dbg_run_debug_server_loop(int port);
+int yorha_dbg_handle_command(dbg_command* command, int conn);
+
+//
+// Command handlers
+//
+extern void __debugbreak();
+
+#include "yorha_dbg_commands.h"
+

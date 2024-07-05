@@ -2,6 +2,9 @@
 
 int _main()
 {
-    yorha_dbg_init();
+    if (yorha_dbg_start())
+    {
+        
+    }
     return 0;
 }
