@@ -127,3 +127,23 @@ int kread(int fd, void *buf, size_t count, struct thread* td)
 
     CALL_RET();    
 }
+
+
+int ksendto(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, socklen_t addrlen, struct thread* td)
+{
+    CHECK_KERNEL_BASE();
+    
+    struct sendto_args uap;
+    int err;
+    
+    uap.s = sockfd;
+    uap.buf = (char*) buf;
+    uap.flags = flags;
+    uap.len = len;
+    uap.to = (char*) dest_addr;
+    uap.tolen = addrlen;
+
+    err = ksys_sendto(td, &uap);
+
+    CALL_RET();
+}

@@ -18,6 +18,8 @@ int (*ksys_recvfrom)(struct thread* td, struct recvfrom_args* uap);
 int (*ksys_read)(struct thread* td, struct read_args* uap);
 int (*ksys_accept)(struct thread* td, struct accept_args* uap);
 int (*ksys_listen)(struct thread* td, struct listen_args* uap);
+int (*ksys_sendto)(struct thread* td, struct sendto_args* uap);
+
 uint8_t* (*kmem_alloc)(vm_map_t map, size_t size);
 void (*kmem_free)(vm_map_t map, void* addr, size_t size);
 
@@ -66,6 +68,7 @@ void init_kernel()
     ksys_read        =  (int(*)(struct thread* td, struct read_args* uap)) sysents[SYS_read].sy_call;
     ksys_listen      =  (int(*)(struct thread* td, struct listen_args* uap)) sysents[SYS_listen].sy_call;
     ksys_accept      =  (int(*)(struct thread* td, struct accept_args* uap)) sysents[SYS_accept].sy_call;
+    ksys_sendto      =  (int(*)(struct thread* td, struct sendto_args* uap)) sysents[SYS_sendto].sy_call;
 }
 
 

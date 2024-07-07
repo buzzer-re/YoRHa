@@ -5,8 +5,9 @@ enum DbgStatus dbg_status = IDLE;
 struct sockaddr_in sockaddr;
 int current_connection;
 struct thread* main_thread;
+dbg_command* current_command = NULL;
 
-void yorha_dbg_breakpoint_handler(trap_frame_ctx* ctx)
+int yorha_dbg_breakpoint_handler(trap_frame_ctx* ctx)
 {
     if (!kprintf)
     {
@@ -14,6 +15,22 @@ void yorha_dbg_breakpoint_handler(trap_frame_ctx* ctx)
         init_kernel();
     }
 
+    if (!current_command || current_command->header.command_type < __max_dbg_trap_handlers) return YORHA_FAILURE;
+
+    command_trap_handler trap_handler;
+
+    //
+    // Command handler
+    //
+    switch (current_command->header.command_type)
+    {
+        case STOP_DBG:
+            trap_handler = command_trap_handlers[current_command->header.command_type];
+            return trap_handler(current_command, current_connection, ctx);
+        default:
+            return YORHA_SUCCESS;       
+    }
+    
     //
     // Build DebugStruct packet, check if any debugee is connected and send the info
     // Wait for connections
@@ -26,29 +43,31 @@ void yorha_dbg_breakpoint_handler(trap_frame_ctx* ctx)
     // db/bp <addr> place a breakpoint `int3` at the given address
     //
 
-    kprintf("YorhaDBG handler called, dumping registers...\n");
-    kprintf("RAX: 0x%llx\n", ctx->rax);
-    kprintf("RCX: 0x%llx\n", ctx->rcx);
-    kprintf("RDX: 0x%llx\n", ctx->rdx);
-    kprintf("RBP: 0x%llx\n", ctx->rbp);
-    kprintf("RSI: 0x%llx\n", ctx->rsi);
-    kprintf("RDI: 0x%llx\n", ctx->rdi);
-    kprintf("R8: 0x%llx\n", ctx->r8);
-    kprintf("R9: 0x%llx\n", ctx->r9);
-    kprintf("R10: 0x%llx\n", ctx->r10);
-    kprintf("R11: 0x%llx\n", ctx->r11);
-    kprintf("R12: 0x%llx\n", ctx->r12);
-    kprintf("R13: 0x%llx\n", ctx->r13);
-    kprintf("R14: 0x%llx\n", ctx->r14);
-    kprintf("R15: 0x%llx\n", ctx->r15);
-    kprintf("RIP: 0x%llx\n", ctx->rip);
-    kprintf("CS: 0x%llx\n", ctx->cs);
-    kprintf("EFLAGS: 0x%llx\n", ctx->eflags);
-    kprintf("RSP: 0x%llx\n", ctx->rsp);
-    kprintf("SS: 0x%llx\n", ctx->ss);
+    // kprintf("YorhaDBG handler called, dumping registers...\n");
+    // kprintf("RAX: 0x%llx\n", ctx->rax);
+    // kprintf("RCX: 0x%llx\n", ctx->rcx);
+    // kprintf("RDX: 0x%llx\n", ctx->rdx);
+    // kprintf("RBP: 0x%llx\n", ctx->rbp);
+    // kprintf("RSI: 0x%llx\n", ctx->rsi);
+    // kprintf("RDI: 0x%llx\n", ctx->rdi);
+    // kprintf("R8: 0x%llx\n", ctx->r8);
+    // kprintf("R9: 0x%llx\n", ctx->r9);
+    // kprintf("R10: 0x%llx\n", ctx->r10);
+    // kprintf("R11: 0x%llx\n", ctx->r11);
+    // kprintf("R12: 0x%llx\n", ctx->r12);
+    // kprintf("R13: 0x%llx\n", ctx->r13);
+    // kprintf("R14: 0x%llx\n", ctx->r14);
+    // kprintf("R15: 0x%llx\n", ctx->r15);
+    // kprintf("RIP: 0x%llx\n", ctx->rip);
+    // kprintf("CS: 0x%llx\n", ctx->cs);
+    // kprintf("EFLAGS: 0x%llx\n", ctx->eflags);
+    // kprintf("RSP: 0x%llx\n", ctx->rsp);
+    // kprintf("SS: 0x%llx\n", ctx->ss);
 
     kprintf("Resuming execution...\n");
     // dont know about that
+
+    return YORHA_SUCCESS; // useless
 }
 
 
@@ -143,8 +162,9 @@ int yorha_dbg_handle_command(dbg_command* command, int conn)
         kprintf("Received command %d\n", command->header.command_type);
         main_thread = curthread;
         current_connection = conn;
-        command_handler handler = command_handlers[command->header.command_type];
-        return handler(command, conn);
+        current_command = command;
+        command_executor executor = command_executor_handlers[command->header.command_type];
+        return executor(command, conn);
     }
 
     kprintf("Invalid command received %d\n", command->header.command_type);
@@ -152,12 +172,41 @@ int yorha_dbg_handle_command(dbg_command* command, int conn)
     return YORHA_SUCCESS;
 }
 
-
 //
 // Launch the int3 in a separated kthread
 //
-int pause_kernel(dbg_command*, int)
+int pause_kernel_executor(dbg_command*, int)
 {
     kproc_create(__debugbreak, 0, 0, 0, 0, "__debugbreak");
     return YORHA_SUCCESS;
 }
+
+int pause_kernel_trap_handler(dbg_command*, int, trap_frame_ctx* ctx)
+{
+    //
+    // Reply the current register state and instruction pointer
+    // 
+    kprintf("pause_kernel_trap_handler called!\n");
+    pause_kernel_response_data_t response = {0};
+
+    memcpy(&response.regs, &ctx->regs, sizeof(registers_t));
+    memset(response.code, 0x00, 0x64);
+    
+    response.header.command_type = STOP_DBG;
+    response.header.response_size = sizeof(response);
+
+    ksendto(current_connection, &response, sizeof(response), 0, 0, 0, main_thread);
+
+    return YORHA_SUCCESS;
+}
+
+
+int stop_debugger_executor(dbg_command*, int)
+{
+    kprintf("Exiting debugger...\n");
+    dbg_status = STOPPED;
+
+    return YORHA_SUCCESS;
+}
+
+

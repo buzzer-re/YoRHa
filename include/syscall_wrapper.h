@@ -14,3 +14,4 @@ int klisten(int socket, int backlog, struct thread* td);
 int kread(int fd, void *buf, size_t count, struct thread* td);
 int kaccept(int sockfd, struct sockaddr *addr, socklen_t *addrlen, struct thread* td);
 int krecvfrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr *src_addr, size_t *addrlen, struct thread* td);
+int ksendto(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, socklen_t addrlen, struct thread* td);
