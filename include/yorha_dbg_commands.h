@@ -75,12 +75,12 @@ int pause_kernel_executor(dbg_command*, int);
 int pause_kernel_trap_handler(dbg_command*, int, trap_frame_ctx*);
 int stop_debugger_executor(dbg_command*, int);
 
-
+#define PAUSE_KERNEL_CODE_DUMP_SIZE 0x100
 typedef struct __pause_kernel_data
 {
     dbg_response_header header;
     registers_t regs;
-    uint8_t code[0x10]; // a simple 64 bytes dump of the current execution code
+    uint8_t code[PAUSE_KERNEL_CODE_DUMP_SIZE]; // a simple 64 bytes dump of the current execution code
 } pause_kernel_response_data_t;
 
 

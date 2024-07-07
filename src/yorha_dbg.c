@@ -1,5 +1,8 @@
 #include "../include/yorha_dbg.h"
 
+
+#define DBG_HANDLE_LOOP while (yorha_handle_command(conn)) continue
+
 int sock = -1;
 enum DbgStatus dbg_status = IDLE;
 struct sockaddr_in sockaddr;
@@ -15,59 +18,29 @@ int yorha_dbg_breakpoint_handler(trap_frame_ctx* ctx)
         init_kernel();
     }
 
-    if (!current_command || current_command->header.command_type < __max_dbg_trap_handlers) return YORHA_FAILURE;
+    if (!current_command || current_command->header.command_type > __max_dbg_trap_handlers) return YORHA_FAILURE;
 
-    command_trap_handler trap_handler;
+    // command_trap_handler trap_handler;
+    int status = YORHA_SUCCESS;
 
+    kprintf("Handling trap frame...\n");
     //
     // Command handler
     //
     switch (current_command->header.command_type)
     {
-        case STOP_DBG:
-            trap_handler = command_trap_handlers[current_command->header.command_type];
-            return trap_handler(current_command, current_connection, ctx);
+        case PAUSE_KERNEL:
+            kprintf("trap_frame: handling with pause_kernel_trap_handler\n");
+            status = pause_kernel_trap_handler(current_command, current_connection, ctx);
+            // DBG_HANDLE_LOOP();
         default:
-            return YORHA_SUCCESS;       
+            kprintf("Unhandled command %d\n", current_command->header.command_type);  
     }
-    
-    //
-    // Build DebugStruct packet, check if any debugee is connected and send the info
-    // Wait for connections
-    // Handle commands
-    // Resume execution if `c/g/continue` is send, step if `nexti,stepi,n` is sent
-    // disas <num> -> read <num> byte from the RIP
-    // dd <num> read N uint32_t from a given address
-    // dq <num> read N uint64_t from a given address
-    // db <num> read N uint8_t from a given address
-    // db/bp <addr> place a breakpoint `int3` at the given address
-    //
 
-    // kprintf("YorhaDBG handler called, dumping registers...\n");
-    // kprintf("RAX: 0x%llx\n", ctx->rax);
-    // kprintf("RCX: 0x%llx\n", ctx->rcx);
-    // kprintf("RDX: 0x%llx\n", ctx->rdx);
-    // kprintf("RBP: 0x%llx\n", ctx->rbp);
-    // kprintf("RSI: 0x%llx\n", ctx->rsi);
-    // kprintf("RDI: 0x%llx\n", ctx->rdi);
-    // kprintf("R8: 0x%llx\n", ctx->r8);
-    // kprintf("R9: 0x%llx\n", ctx->r9);
-    // kprintf("R10: 0x%llx\n", ctx->r10);
-    // kprintf("R11: 0x%llx\n", ctx->r11);
-    // kprintf("R12: 0x%llx\n", ctx->r12);
-    // kprintf("R13: 0x%llx\n", ctx->r13);
-    // kprintf("R14: 0x%llx\n", ctx->r14);
-    // kprintf("R15: 0x%llx\n", ctx->r15);
-    // kprintf("RIP: 0x%llx\n", ctx->rip);
-    // kprintf("CS: 0x%llx\n", ctx->cs);
-    // kprintf("EFLAGS: 0x%llx\n", ctx->eflags);
-    // kprintf("RSP: 0x%llx\n", ctx->rsp);
-    // kprintf("SS: 0x%llx\n", ctx->ss);
 
     kprintf("Resuming execution...\n");
-    // dont know about that
-
-    return YORHA_SUCCESS; // useless
+    
+    return status; // useless
 }
 
 
@@ -116,10 +89,13 @@ int yorha_dbg_run_debug_server_loop(int port)
         kclose(sock, td);
         return YORHA_FAILURE;
     }
-
+    
     dbg_status = RUNNING;    
     if (sock >= 0)
     {
+        //
+        // Debugger loop
+        //
         while (dbg_status == RUNNING)
         {
             conn = kaccept(sock, NULL, NULL, td);
@@ -130,6 +106,9 @@ int yorha_dbg_run_debug_server_loop(int port)
             }
             
         read_data:
+        /*
+            while (yorha_dbg_handle_command(conn) != CLIENT_CLOSED) continue;
+        */
             if ((cmd_size = kread(conn, command_data, 0x1000, td)) > 0)
             {
                 dbg_command* command = (dbg_command*) command_data;
@@ -163,12 +142,20 @@ int yorha_dbg_handle_command(dbg_command* command, int conn)
         main_thread = curthread;
         current_connection = conn;
         current_command = command;
-        command_executor executor = command_executor_handlers[command->header.command_type];
-        return executor(command, conn);
+
+        switch (command->header.command_type)
+        {
+            case PAUSE_KERNEL:
+                return pause_kernel_executor(command, conn);
+            default:
+                kprintf("Unhandled command %d\n", command->header.command_type);
+        }
+        // command_executor executor = command_executor_handlers[command->header.command_type];
+        // return executor(command, conn);
     }
 
     kprintf("Invalid command received %d\n", command->header.command_type);
-    // ksend(conn, "invalid command", )
+
     return YORHA_SUCCESS;
 }
 
@@ -177,6 +164,7 @@ int yorha_dbg_handle_command(dbg_command* command, int conn)
 //
 int pause_kernel_executor(dbg_command*, int)
 {
+    kprintf("pause_kernel_executor\n");
     kproc_create(__debugbreak, 0, 0, 0, 0, "__debugbreak");
     return YORHA_SUCCESS;
 }
@@ -190,13 +178,21 @@ int pause_kernel_trap_handler(dbg_command*, int, trap_frame_ctx* ctx)
     pause_kernel_response_data_t response = {0};
 
     memcpy(&response.regs, &ctx->regs, sizeof(registers_t));
-    memset(response.code, 0x00, 0x64);
+    memset(response.code, 0x00, PAUSE_KERNEL_CODE_DUMP_SIZE);
     
-    response.header.command_type = STOP_DBG;
+    response.header.command_type = PAUSE_KERNEL;
     response.header.response_size = sizeof(response);
 
-    ksendto(current_connection, &response, sizeof(response), 0, 0, 0, main_thread);
+    int res = ksendto(current_connection, &response, sizeof(response), 0, 0, 0, main_thread);
+    if (res < 0)
+    {
+        kprintf("Error calling ksendto!\n");
+        return YORHA_FAILURE;
+    }
 
+    /*
+    while (yorha_handle_command(conn)) continue;
+    */
     return YORHA_SUCCESS;
 }
 

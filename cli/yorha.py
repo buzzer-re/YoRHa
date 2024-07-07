@@ -3,10 +3,11 @@ import sys
 import construct
 
 PS4_IP = "192.168.88.12"
-PS4_DBG_PORT = 8888
+PS4_DBG_PORT = 8887
 
 class CommandsCode:
     PAUSE_DBG = 0
+    STOP_DBG = 1
 
 
 dbg_request_header = construct.Struct(

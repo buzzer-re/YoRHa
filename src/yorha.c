@@ -21,7 +21,7 @@ int yorha_dbg_start(void*, void*)
     //
     // Start the debug loop, in theory we should "never" exit this loop, exiting the debug loop means that the debugger should be disabled
     //
-    LOG("Staring network debugger on port %d...", DBG_PORT);
+    LOG("Starting network debugger on port %d...", DBG_PORT);
     if (yorha_dbg_run_debug_server_loop(DBG_PORT) != YORHA_SUCCESS)
     {
         kprintf("Unable to execute YoRHdbg debug server! aborting...\n");
@@ -49,19 +49,19 @@ void overwrite_idt_gate(int interruption_number, uint64_t gate_addr)
     idt_64* idt_entry;
     __sidt(&idtr);
 
-    LOG("Found IDT at %llx\n", idtr.base);
+    // LOG("Found IDT at %llx\n", idtr.base);
 
     idt_array = (idt_64*) idtr.base;
     idt_entry = (idt_64*) &idt_array[interruption_number];
     old_int3_gate_addr = UNPACK_HANDLER_ADDR(idt_entry);
     
-    LOG("Interruption %d (0x%llx) handler is at -> 0x%llx\n", interruption_number, idt_entry, UNPACK_HANDLER_ADDR(idt_entry));
+    // LOG("Interruption %d (0x%llx) handler is at -> 0x%llx\n", interruption_number, idt_entry, UNPACK_HANDLER_ADDR(idt_entry));
 
     idt_entry->offset_low     = (gate_addr & 0xFFFF);
     idt_entry->offset_middle  = (gate_addr >> 16 ) & 0xFFFF;
     idt_entry->offset_high    = (gate_addr >> 32 ) & 0xFFFFFFFF;
 
-    LOG("Interruption %d (0x%llx) handler now is at -> 0x%llx\n", interruption_number, idt_entry, UNPACK_HANDLER_ADDR(idt_entry));
+    // LOG("Interruption %d (0x%llx) handler now is at -> 0x%llx\n", interruption_number, idt_entry, UNPACK_HANDLER_ADDR(idt_entry));
 
     disable_safe_patch();
 
