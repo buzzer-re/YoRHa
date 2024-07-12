@@ -10,7 +10,7 @@ int current_connection;
 struct thread* main_thread;
 dbg_command* current_command = NULL;
 
-int yorha_dbg_breakpoint_handler(trap_frame_ctx* ctx)
+int yorha_dbg_breakpoint_handler(trap_frame_t* ctx)
 {
     if (!kprintf)
     {
@@ -32,7 +32,7 @@ int yorha_dbg_breakpoint_handler(trap_frame_ctx* ctx)
         case PAUSE_KERNEL:
             kprintf("trap_frame: handling with pause_kernel_trap_handler\n");
             status = pause_kernel_trap_handler(current_command, current_connection, ctx);
-            // DBG_HANDLE_LOOP();
+            break;
         default:
             kprintf("Unhandled command %d\n", current_command->header.command_type);  
     }
@@ -147,6 +147,8 @@ int yorha_dbg_handle_command(dbg_command* command, int conn)
         {
             case PAUSE_KERNEL:
                 return pause_kernel_executor(command, conn);
+            case STOP_DBG:
+                return stop_debugger_executor(command, conn);
             default:
                 kprintf("Unhandled command %d\n", command->header.command_type);
         }
@@ -164,23 +166,24 @@ int yorha_dbg_handle_command(dbg_command* command, int conn)
 //
 int pause_kernel_executor(dbg_command*, int)
 {
-    kprintf("pause_kernel_executor\n");
     kproc_create(__debugbreak, 0, 0, 0, 0, "__debugbreak");
     return YORHA_SUCCESS;
 }
 
-int pause_kernel_trap_handler(dbg_command*, int, trap_frame_ctx* ctx)
+
+int pause_kernel_trap_handler(dbg_command*, int, trap_frame_t* ctx)
 {
     //
     // Reply the current register state and instruction pointer
     // 
-    kprintf("pause_kernel_trap_handler called!\n");
     pause_kernel_response_data_t response = {0};
 
-    memcpy(&response.regs, &ctx->regs, sizeof(registers_t));
-    memset(response.code, 0x00, PAUSE_KERNEL_CODE_DUMP_SIZE);
-    
+    memcpy(&response.trap_frame, &ctx, sizeof(trap_frame_t));
+    //
+    // TODO: Read X bytes from RIP, verify if the memory is safe to read
+    //
     response.header.command_type = PAUSE_KERNEL;
+    response.header.command_status = YORHA_SUCCESS;
     response.header.response_size = sizeof(response);
 
     int res = ksendto(current_connection, &response, sizeof(response), 0, 0, 0, main_thread);
@@ -190,9 +193,6 @@ int pause_kernel_trap_handler(dbg_command*, int, trap_frame_ctx* ctx)
         return YORHA_FAILURE;
     }
 
-    /*
-    while (yorha_handle_command(conn)) continue;
-    */
     return YORHA_SUCCESS;
 }
 

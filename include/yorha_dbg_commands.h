@@ -15,7 +15,8 @@ enum DbgStatus
     ERROR
 };
 
-typedef struct __registers
+
+typedef struct __trap_frame
 {
     uint64_t rax;
     uint64_t rcx;
@@ -37,12 +38,8 @@ typedef struct __registers
     uint64_t eflags;
     uint64_t rsp;
     uint64_t ss;
-} registers_t;
+} trap_frame_t;
 
-typedef struct __trap_frame
-{
-    registers_t regs;
-} trap_frame_ctx;
 
 typedef struct __dbg_command_header
 {
@@ -50,11 +47,14 @@ typedef struct __dbg_command_header
     uint64_t argument_size;
 } dbg_command_header;
 
+
 typedef struct __dbg_response_header
 {
     enum command_type command_type;
+    int command_status;
     uint64_t response_size;
 } dbg_response_header;
+
 
 typedef struct __dbg_command
 {
@@ -62,24 +62,26 @@ typedef struct __dbg_command
     uint8_t data[];
 } dbg_command;
 
+
 typedef struct __dbg_response
 {
     dbg_response_header header;
     uint8_t data[];
 } dbg_response;
 
+
 typedef int(*command_executor)(dbg_command*, int);
-typedef int(*command_trap_handler)(dbg_command*, int, trap_frame_ctx*);
+typedef int(*command_trap_handler)(dbg_command*, int, trap_frame_t*);
 
 int pause_kernel_executor(dbg_command*, int);
-int pause_kernel_trap_handler(dbg_command*, int, trap_frame_ctx*);
+int pause_kernel_trap_handler(dbg_command*, int, trap_frame_t*);
 int stop_debugger_executor(dbg_command*, int);
 
 #define PAUSE_KERNEL_CODE_DUMP_SIZE 0x100
 typedef struct __pause_kernel_data
 {
     dbg_response_header header;
-    registers_t regs;
+    trap_frame_t trap_frame;
     uint8_t code[PAUSE_KERNEL_CODE_DUMP_SIZE]; // a simple 64 bytes dump of the current execution code
 } pause_kernel_response_data_t;
 
