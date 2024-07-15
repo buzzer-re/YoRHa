@@ -22,4 +22,3 @@ class PauseDebugger(Command):
         insts = self.disas.disas(self.response.code, self.response.trap_frame.rip)
         for inst in insts:
             print(f"{hex(inst.address)}\t {' '.join([hex(x)[2:] for x in inst.bytes])}\t {inst.assembly}")
-    

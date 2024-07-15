@@ -13,3 +13,7 @@
 #define kmem_alloc_offset       0x0037BE70
 #define kmem_free_offset        0x0037C040
 #define kkernel_map_offset      0x02268d48
+#define kmtx_destroy            0x002EF9D0
+#define kmtx_init_offset        0x002EF960
+#define kmtx_lock_sleep         0x002EEF50
+#define kmtx_unlock_sleep       0x002EF270

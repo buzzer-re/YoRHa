@@ -37,6 +37,7 @@ extern struct sysent* sysents; // syscall table
 ///
 extern int (*kprintf)(const char *format, ...);
 extern int (*kproc_create)(void (*func)(void *), void *arg, struct proc **newpp, int flags, int pages, const char *fmt, ...);
+extern void (*kmtx_init)(struct mtx *m, const char *name, const char *type, int opts);
 
 //
 // Syscalls

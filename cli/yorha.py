@@ -12,15 +12,6 @@ class CommandsCode:
     STOP_DBG = 1
 
 
-# def start_dbg_loop(sock):
-#     pause_pkt = dbg_request_header.build(dict(cmd_type=CommandsCode.PAUSE_DBG, argument_size=0))
-#     sock.send(pause_pkt)
-#     res = pause_debugger_response.parse(sock.recv(0x1000))
-#     sock.close()
-#     print(res)
-
-
-
 def main():
     debugger = Debugger(PS4_IP, PS4_DBG_PORT)
     

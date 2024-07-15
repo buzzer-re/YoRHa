@@ -9,7 +9,12 @@ int (*ksock_close)(void *socket);
 int (*ksock_bind)(void *socket, struct sockaddr *addr);
 int (*ksock_recv)(void *socket, void *buf, size_t *len);
 int (*kproc_create)(void (*func)(void *), void *arg, struct proc **newpp, int flags, int pages, const char *fmt, ...);
+void (*kmtx_init)(struct mtx *m, const char *name, const char *type, int opts);
 
+
+//
+// Syscalls
+//
 int (*ksys_socket)(struct thread* td, struct socket_args* uap);
 int (*ksys_bind)(struct thread* td, struct bind_args* uap);
 int (*ksys_recvfrom)(struct thread* td, struct recvfrom_args* uap);
@@ -58,6 +63,8 @@ void init_kernel()
     kproc_create    = (int (*)(void (*func)(void *), void *arg, struct proc **newpp, int flags, int pages, const char *fmt, ...)) &kernel_base[kproc_create_offset];
     kmem_alloc      = (uint8_t*(*)(vm_map_t map, size_t size)) &kernel_base[kmem_alloc_offset];
     kmem_free       = (void(*)(vm_map_t map, void* addr, size_t size)) &kernel_base[kmem_free_offset];
+    kmtx_init       = (void(*)(struct mtx *m, const char *name, const char *type, int opts)) &kernel_base[kmtx_init_offset];
+   // kmtx_
     //
     // Load syscalls
     //

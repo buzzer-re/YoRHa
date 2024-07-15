@@ -23,24 +23,63 @@ int yorha_dbg_breakpoint_handler(trap_frame_t* ctx)
     // command_trap_handler trap_handler;
     int status = YORHA_SUCCESS;
 
-    kprintf("Handling trap frame... -> 0x%llx\n", ctx->rip);
-    //
-    // Command handler
-    //
-    switch (current_command->header.command_type)
-    {
-        case PAUSE_KERNEL:
-            kprintf("trap_frame: handling with pause_kernel_trap_handler\n");
-            status = pause_kernel_trap_handler(current_command, current_connection, ctx);
-            break;
-        default:
-            kprintf("Unhandled command %d\n", current_command->header.command_type);  
-    }
+    status = yorha_trap_command_handler(ctx);
 
+    while(1) continue;
 
     kprintf("Resuming execution...\n");
     
-    return status; // useless
+    return status;
+}
+
+int yorha_trap_command_handler(trap_frame_t* ctx)
+{
+    //
+    // Command handler
+    //
+    uint8_t command_data[0x1000];
+    int status = YORHA_SUCCESS;
+    while (1)
+    {
+        kprintf("Processing command %d\n", current_command->header.command_type);
+        switch (current_command->header.command_type)
+        {
+            case PAUSE_KERNEL:
+                kprintf("trap_frame: handling with pause_kernel_trap_handler\n");
+                status = pause_kernel_trap_handler(current_command, current_connection, ctx);
+                break;
+            default:
+                kprintf("Unhandled command %d\n", current_command->header.command_type);  
+        }
+
+        if (yorha_trap_dbg_get_new_commands(command_data, 0x1000) == YORHA_FAILURE)
+        {
+            kprintf("Error reading new commands!\n");
+            break;
+        }   
+        current_command = (dbg_command*) command_data;
+    }
+   
+
+    return status;
+}
+
+//
+// Read new commands using the debug loop thread and connection socket
+//
+int yorha_trap_dbg_get_new_commands(uint8_t* buff, size_t buff_size)
+{
+    kprintf("Starting trap frame command handler...\nReading data inside the gate...\n");
+
+    if (kread(current_connection, buff, buff_size, main_thread) > 0)
+    {
+        kprintf("Read something...");
+        return YORHA_SUCCESS;
+    }
+    
+    kprintf("read failed\n");
+
+    return YORHA_FAILURE;
 }
 
 
@@ -106,13 +145,12 @@ int yorha_dbg_run_debug_server_loop(int port)
             }
             
         read_data:
-        /*
-            while (yorha_dbg_handle_command(conn) != CLIENT_CLOSED) continue;
-        */
+            // check mtx
+            kprintf("Reading data (outside gate)\n");
             if ((cmd_size = kread(conn, command_data, 0x1000, td)) > 0)
             {
                 dbg_command* command = (dbg_command*) command_data;
-
+                // mtx_lock -> should be unlocked in the trap fame handler
                 if (yorha_dbg_handle_command(command, conn) != STOP_DBG)
                 {
                     kprintf("Waiting next commands...\n");
@@ -130,6 +168,8 @@ int yorha_dbg_run_debug_server_loop(int port)
 
     return YORHA_SUCCESS;
 }
+
+
 
 int yorha_dbg_handle_command(dbg_command* command, int conn)
 {
@@ -192,16 +232,14 @@ int pause_kernel_trap_handler(dbg_command*, int, trap_frame_t* ctx)
     response.header.command_type = PAUSE_KERNEL;
     response.header.command_status = YORHA_SUCCESS;
     response.header.response_size = sizeof(response);
-    kprintf("Response header size: %d\n", sizeof(response.header));
-    kprintf("Trap fame size: %d\n", sizeof(response.trap_frame));
-    
+
     int res = ksendto(current_connection, &response, sizeof(response), 0, 0, 0, main_thread);
     if (res < 0)
     {
         kprintf("Error calling ksendto!\n");
         return YORHA_FAILURE;
     }
-
+    
     return YORHA_SUCCESS;
 }
 
