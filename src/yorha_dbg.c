@@ -44,9 +44,13 @@ int yorha_trap_command_handler(trap_frame_t* ctx)
         kprintf("Processing command %d\n", current_command->header.command_type);
         switch (current_command->header.command_type)
         {
-            case PAUSE_KERNEL:
+            case DBG_PAUSE:
                 kprintf("trap_frame: handling with pause_kernel_trap_handler\n");
                 status = pause_kernel_trap_handler(current_command, current_connection, ctx);
+                break;
+            case DBG_PLACE_BREAKPOINT:
+                kprintf("Trap frame: handling with place_breakpoint_trap_handler");
+                status = place_breakpoint_trap_handler(current_command, current_connection, ctx);
                 break;
             default:
                 kprintf("Unhandled command %d\n", current_command->header.command_type);  
@@ -143,7 +147,9 @@ int yorha_dbg_run_debug_server_loop(int port)
                 kprintf("Error handling connection...\n");
                 break;
             }
-            
+            //
+            // TODO: Send welcome packet with the kernel information
+            //
         read_data:
             // check mtx
             kprintf("Reading data (outside gate)\n");
@@ -151,13 +157,13 @@ int yorha_dbg_run_debug_server_loop(int port)
             {
                 dbg_command* command = (dbg_command*) command_data;
                 // mtx_lock -> should be unlocked in the trap fame handler
-                if (yorha_dbg_handle_command(command, conn) != STOP_DBG)
+                if (yorha_dbg_handle_command(command, conn) != DBG_STOP)
                 {
                     kprintf("Waiting next commands...\n");
                     goto read_data;
                 }
 
-                kprintf("Received STOP_DBG command from remote, closing connection...\n");
+                kprintf("Received DBG_STOP command from remote, closing connection...\n");
             }
             
             kclose(conn, td);
@@ -185,10 +191,12 @@ int yorha_dbg_handle_command(dbg_command* command, int conn)
 
         switch (command->header.command_type)
         {
-            case PAUSE_KERNEL:
+            case DBG_PAUSE:
                 return pause_kernel_executor(command, conn);
-            case STOP_DBG:
+            case DBG_STOP:
                 return stop_debugger_executor(command, conn);
+            case DBG_PLACE_BREAKPOINT:
+                return place_breakpoint_executor(command, conn);
             default:
                 kprintf("Unhandled command %d\n", command->header.command_type);
         }
@@ -211,6 +219,9 @@ int pause_kernel_executor(dbg_command*, int)
 }
 
 
+//
+// Acquire the information that the kernel had before the pause and send back to the user
+//
 int pause_kernel_trap_handler(dbg_command*, int, trap_frame_t* ctx)
 {
     //
@@ -229,7 +240,7 @@ int pause_kernel_trap_handler(dbg_command*, int, trap_frame_t* ctx)
     memcpy(response.code, (const void*) ctx->rip, PAUSE_KERNEL_CODE_DUMP_SIZE);
 
     
-    response.header.command_type = PAUSE_KERNEL;
+    response.header.command_type = DBG_PAUSE;
     response.header.command_status = YORHA_SUCCESS;
     response.header.response_size = sizeof(response);
 
@@ -243,7 +254,47 @@ int pause_kernel_trap_handler(dbg_command*, int, trap_frame_t* ctx)
     return YORHA_SUCCESS;
 }
 
+//
+// For the response, we can use the same structure as the pause
+//
+int place_breakpoint_trap_handler(dbg_command* command, int conn, trap_frame_t* ctx)
+{
+    return pause_kernel_trap_handler(command, conn, ctx);
+}
 
+
+//
+// Place breakpoint executor, given an address verify if is in kernel space range, and replace the byte with int3
+// If the page is not executable, an error will be sent to the user
+//
+int place_breakpoint_executor(dbg_command* command, int)
+{
+    if (command->header.argument_size != sizeof(breakpoint_request_t))
+    {
+        // return error
+        kprintf("Wrong argument size! got %d expected %d\n", command->header.argument_size, sizeof(breakpoint_request_t));
+        return YORHA_FAILURE;
+    }
+    uint8_t old_opcode;
+    uint8_t* code_at;
+    breakpoint_request_t* breakpoint_request = (breakpoint_request_t*) command->data;
+
+    enable_safe_patch();
+
+    code_at = (uint8_t*) *breakpoint_request->target_address;
+    // where do I store that shit ?
+    old_opcode = code_at[0];
+    code_at[0] = INT3;
+    
+    disable_safe_patch();
+
+    return YORHA_SUCCESS;
+}
+
+
+//
+// "Stop" the debug loop, which will cause the IDT to be restored and the Yorha dbg ends
+//
 int stop_debugger_executor(dbg_command*, int)
 {
     kprintf("Exiting debugger...\n");

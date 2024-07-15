@@ -39,8 +39,9 @@ trap_frame_t = construct.Struct(
 
 
 class DebuggerCommandsCode:
-    PAUSE_DEBUGGER = 0
-    STOP_DEBUGGER  = 1
+    PAUSE_DEBUGGER      = 0
+    STOP_DEBUGGER       = 1
+    PLACE_BREAKPOINT    = 2
 
 class Command:
     MAX_SIZE = 0x1000
@@ -52,10 +53,12 @@ class Command:
         pass
 
     def serialize(self) -> bytearray:
+        print(self.command)
         return self.command
     
     def parse_response(self, data):
-        self.response = self.cmd_struct.parse(data)
+        print(data)
+        self.response = self.response_struct.parse(data)
 
 
 

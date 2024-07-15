@@ -1,4 +1,4 @@
-from commands import pause, stop
+from commands import pause, stop, breakpoint
 import socket
 
 class Registers:
@@ -59,6 +59,11 @@ class Debugger:
         self.__send_cmd(pause_cmd)
         pass
 
+    def place_breakpoint(self, addr):
+        print(f"Placing breakpoint at {addr}")
+        addr = int(addr, base=16)
+        dbg_cmd = breakpoint.BreakpointCommand(addr)
+        self.__send_cmd(dbg_cmd)
     
     def context(self):
         pass
