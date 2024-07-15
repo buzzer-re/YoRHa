@@ -23,7 +23,7 @@ int yorha_dbg_breakpoint_handler(trap_frame_t* ctx)
     // command_trap_handler trap_handler;
     int status = YORHA_SUCCESS;
 
-    kprintf("Handling trap frame...\n");
+    kprintf("Handling trap frame... -> 0x%llx\n", ctx->rip);
     //
     // Command handler
     //
@@ -158,7 +158,7 @@ int yorha_dbg_handle_command(dbg_command* command, int conn)
 
     kprintf("Invalid command received %d\n", command->header.command_type);
 
-    return YORHA_SUCCESS;
+    return YORHA_FAILURE;
 }
 
 //
@@ -182,10 +182,19 @@ int pause_kernel_trap_handler(dbg_command*, int, trap_frame_t* ctx)
     //
     // TODO: Read X bytes from RIP, verify if the memory is safe to read
     //
+
+    //
+    // TODO: Verify if RIP + PAUSE_KERNEL_CODE_DUMP_SIZE is a valid kernel executable address!
+    //
+    memcpy(response.code, (const void*) ctx->rip, PAUSE_KERNEL_CODE_DUMP_SIZE);
+
+    
     response.header.command_type = PAUSE_KERNEL;
     response.header.command_status = YORHA_SUCCESS;
     response.header.response_size = sizeof(response);
-
+    kprintf("Response header size: %d\n", sizeof(response.header));
+    kprintf("Trap fame size: %d\n", sizeof(response.trap_frame));
+    
     int res = ksendto(current_connection, &response, sizeof(response), 0, 0, 0, main_thread);
     if (res < 0)
     {

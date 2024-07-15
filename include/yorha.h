@@ -9,7 +9,7 @@ extern void (*int_breakpoint_handler)();
 extern uint64_t __get_rsp();
 extern uint64_t __get_rip();
 
-#define DBG_PORT 8888
+#define DBG_PORT 8889
 #define LOG(msg, ...) kprintf("YorhaDBG: "msg"\n", __VA_ARGS__)
 
 int yorha_dbg_start();

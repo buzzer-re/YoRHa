@@ -1,4 +1,4 @@
-from commands import pause
+from commands import pause, stop
 import socket
 
 class Registers:
@@ -29,8 +29,10 @@ class Debugger:
         return False
 
 
-    def disconnect(self) -> bool:
+    def disconnect(self, unload_dbg=False) -> bool:
         try:
+            if unload_dbg:
+                self.__send_cmd(stop.QuitDebugger(), False)
             self.socket.close()
             return True
         except Exception as e:
@@ -40,12 +42,13 @@ class Debugger:
         
         return False
 
-    def __send_cmd(self, command) -> str:
+    def __send_cmd(self, command, wait=True) -> str:
         try:
             self.socket.send(command.serialize())
-            response = self.socket.recv(command.MAX_SIZE)
-            command.parse_response(response)
-            command.print_response()
+            if wait:
+                response = self.socket.recv(command.MAX_SIZE)
+                command.parse_response(response)
+                command.print_response()
         except Exception as e:
             print("Unable to send command!")
             print(e)

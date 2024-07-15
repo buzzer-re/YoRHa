@@ -17,6 +17,7 @@ LIBS	:= -lPS4
 TARGET = $(shell basename "$(CURDIR)").bin
 ELF    = $(shell basename "$(CURDIR)").elf
 $(TARGET): $(ODIR) $(OBJS)
+
 	$(CC) $(LIBPS4)/crt0.s $(ODIR)/*.o -o $(ELF) $(CFLAGS) $(LFLAGS) $(LIBS)
 	$(OBJCOPY) -O binary $(ELF) "$(TARGET)"
 	mv $(ELF) build/

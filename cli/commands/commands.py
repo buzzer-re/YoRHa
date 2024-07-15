@@ -1,14 +1,16 @@
 import construct
 
+
+## Shared debugger packets between commmands ##
 dbg_request_header = construct.Struct(
-    "cmd_type" / construct.Int8ul,
+    "cmd_type" / construct.Int32ul,
     "argument_size" / construct.Int64ul
 )
 
 dbg_response_header = construct.Struct(
-    "cmd_type" / construct.Int8ul,
-    "command_status" / construct.Int8ul,
-    "response_size" / construct.Int8ul,
+    "cmd_type" / construct.Int32sl,
+    "command_status" / construct.Int32sl,
+    "response_size" / construct.Int64ul,
 )
 
 
@@ -21,6 +23,7 @@ trap_frame_t = construct.Struct(
     "rdi"           / construct.Int64ul,
     "r8"            / construct.Int64ul,
     "r9"            / construct.Int64ul,
+    "r10"           / construct.Int64ul,
     "r11"           / construct.Int64ul,
     "r12"           / construct.Int64ul,
     "r13"           / construct.Int64ul,
@@ -34,13 +37,10 @@ trap_frame_t = construct.Struct(
     "ss"            / construct.Int64ul
 )
 
-pause_debugger_response = construct.Struct(
-    "header"     / dbg_response_header,
-    "trap_frame" / trap_frame_t
-)
 
 class DebuggerCommandsCode:
     PAUSE_DEBUGGER = 0
+    STOP_DEBUGGER  = 1
 
 class Command:
     MAX_SIZE = 0x1000
@@ -56,6 +56,7 @@ class Command:
     
     def parse_response(self, data):
         self.response = self.cmd_struct.parse(data)
+
 
 
 
