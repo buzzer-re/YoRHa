@@ -1,4 +1,9 @@
 #pragma once
+#include <stddef.h>
+#include <stdbool.h>
+
+#define DBG_TRAP_PORT 8880
+#define DBG_CTRL_PORT 8882
 
 enum 
 {

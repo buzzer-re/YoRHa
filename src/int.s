@@ -44,9 +44,9 @@
 int_breakpoint_handler:
     SAVE_GP_REGISTERS
     mov rdi, rsp
-  //  sub rsp, 0x100
+    cli
     call yorha_dbg_breakpoint_handler
-  //  add rsp, 0x100
+    sti
     RESTORE_GP_REGISTERS
     iretq
 

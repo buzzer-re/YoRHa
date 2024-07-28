@@ -4,8 +4,9 @@
 
 enum dbg_commands_code  {
     DBG_PAUSE = 0,
-    DBG_STOP = 1,
-    DBG_PLACE_BREAKPOINT = 2,
+    DBG_STOP,
+    DBG_PLACE_BREAKPOINT,
+    DBG_CONTINUE,
 };
 
 enum DbgStatus
@@ -113,7 +114,6 @@ static void* command_trap_handlers[] =
     NULL, // This will never be called,
     place_breakpoint_trap_handler
 };
-
 
 
 #define __max_dbg_commands sizeof(command_executor_handlers)/sizeof(command_executor_handlers[0])

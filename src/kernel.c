@@ -3,14 +3,14 @@
 void (*critical_enter)();
 void (*critical_exit)();
 int (*kprintf)(const char *format, ...) = (int(*)(const char *, ...)) NULL;
-int (*kprintf)(const char *format, ...);
 int (*ksock_create)(void **socket, int domain, int type, int protocol);
 int (*ksock_close)(void *socket);
 int (*ksock_bind)(void *socket, struct sockaddr *addr);
 int (*ksock_recv)(void *socket, void *buf, size_t *len);
 int (*kproc_create)(void (*func)(void *), void *arg, struct proc **newpp, int flags, int pages, const char *fmt, ...);
 void (*kmtx_init)(struct mtx *m, const char *name, const char *type, int opts);
-
+int (*kgeneric_stop_cpus)(cpuset_t map, uint32_t type);
+int (*krestart_cpus)(cpuset_t map);
 
 //
 // Syscalls
@@ -53,18 +53,20 @@ void init_kernel()
     //
     // Load kernel functions
     // 
-    critical_enter  = (void(*)()) &kernel_base[critical_enter_offset];
-    critical_exit   = (void(*)()) &kernel_base[critical_exit_offset];
-	kprintf         = (int (*)(const char *format, ...)) (&kernel_base[kprintf_offset]);
-    ksock_create    = (int (*)(void **socket, int domain, int type, int protocol)) &kernel_base[ksock_create_offset];
-    ksock_close     = (int (*)(void *socket)) &kernel_base[ksock_close_offset];
-    ksock_bind      = (int (*)(void* socket, struct sockaddr *addr)) &kernel_base[ksock_bind_offset];
-    ksock_recv      = (int (*)(void *socket, void *buf, size_t *len)) &kernel_base[ksock_recv_offset];
-    kproc_create    = (int (*)(void (*func)(void *), void *arg, struct proc **newpp, int flags, int pages, const char *fmt, ...)) &kernel_base[kproc_create_offset];
-    kmem_alloc      = (uint8_t*(*)(vm_map_t map, size_t size)) &kernel_base[kmem_alloc_offset];
-    kmem_free       = (void(*)(vm_map_t map, void* addr, size_t size)) &kernel_base[kmem_free_offset];
-    kmtx_init       = (void(*)(struct mtx *m, const char *name, const char *type, int opts)) &kernel_base[kmtx_init_offset];
-   // kmtx_
+    critical_enter      = (void(*)()) &kernel_base[critical_enter_offset];
+    critical_exit       = (void(*)()) &kernel_base[critical_exit_offset];
+	kprintf             = (int (*)(const char *format, ...)) (&kernel_base[kprintf_offset]);
+    ksock_create        = (int (*)(void **socket, int domain, int type, int protocol)) &kernel_base[ksock_create_offset];
+    ksock_close         = (int (*)(void *socket)) &kernel_base[ksock_close_offset];
+    ksock_bind          = (int (*)(void* socket, struct sockaddr *addr)) &kernel_base[ksock_bind_offset];
+    ksock_recv          = (int (*)(void *socket, void *buf, size_t *len)) &kernel_base[ksock_recv_offset];
+    kproc_create        = (int (*)(void (*func)(void *), void *arg, struct proc **newpp, int flags, int pages, const char *fmt, ...)) &kernel_base[kproc_create_offset];
+    kmem_alloc          = (uint8_t*(*)(vm_map_t map, size_t size)) &kernel_base[kmem_alloc_offset];
+    kmem_free           = (void(*)(vm_map_t map, void* addr, size_t size)) &kernel_base[kmem_free_offset];
+    kmtx_init           = (void(*)(struct mtx *m, const char *name, const char *type, int opts)) &kernel_base[kmtx_init_offset];
+    kgeneric_stop_cpus  = (int (*)(cpuset_t map, uint32_t type)) &kernel_base[kgeneric_stop_cpus_offset];
+    krestart_cpus       = (int(*)(cpuset_t map)) &kernel_base[krestart_cpus_offset];
+
     //
     // Load syscalls
     //

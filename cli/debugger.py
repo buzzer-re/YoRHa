@@ -7,11 +7,12 @@ class Registers:
 
 
 class Debugger:
-    def __init__(self, host, port, quiet = False):
+    def __init__(self, host, port, dbg_port, quiet = False):
         self.host = host
         self.port = port
         self.socket = None
         self.quiet = quiet
+        self.dbg_port = dbg_port
         self.regs = Registers()
     
 
