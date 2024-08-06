@@ -13,6 +13,7 @@ class Debugger:
         self.socket = None
         self.quiet = quiet
         self.dbg_port = dbg_port
+        self.dbg_socket = None
         self.regs = Registers()
     
 
@@ -57,7 +58,13 @@ class Debugger:
 
     def pause_debugger(self) -> bool:
         pause_cmd = pause.PauseDebugger()
-        self.__send_cmd(pause_cmd)
+        self.__send_cmd(pause_cmd, False)
+        # self.dbg_socket = socket.socket()
+        # self.dbg_socket.connect((self.host, self.dbg_port))
+        # data = self.dbg_socket.recv(0x1000)
+        # pause_cmd.parse_response(data)
+        # pause_cmd.print_response()
+        # self.__send_cmd(pause_cmd, False)
         pass
 
     def place_breakpoint(self, addr):

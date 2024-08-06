@@ -4,9 +4,8 @@
 //
 // Create a socket and bind to given port, returns the sock
 //
-int listen_port(int port)
+int listen_port(int port, struct thread* td)
 {
-    struct thread* td = curthread;
     int sock = ksocket(AF_INET, SOCK_STREAM, 0, td);
 
     if (sock < 0)

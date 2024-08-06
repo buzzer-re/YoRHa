@@ -5,8 +5,8 @@ import construct
 from debugger import *
 
 PS4_IP = "192.168.88.12"
-PS4_CTRL_DBG_PORT = 8882
-PS4_DBG_PORT = 8880
+PS4_CTRL_DBG_PORT = 8883
+PS4_DBG_PORT = 8881
 
 class CommandsCode:
     PAUSE_DBG = 0

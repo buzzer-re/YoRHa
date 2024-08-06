@@ -18,6 +18,8 @@
         __asm__("sti");\
         enable_cr0_wp()\
 
+
+
 void init_kernel();
 uint8_t* load_kernel_base();
 void enable_safe_patch();
@@ -32,6 +34,7 @@ extern uint8_t* kernel_base;
 extern struct sysent* sysents; // syscall table
 
 
+
 //
 // Kernel functions
 ///
@@ -40,6 +43,8 @@ extern int (*kproc_create)(void (*func)(void *), void *arg, struct proc **newpp,
 extern void (*kmtx_init)(struct mtx *m, const char *name, const char *type, int opts);
 extern int (*kgeneric_stop_cpus)(cpuset_t map, uint32_t type);
 extern int (*krestart_cpus)(cpuset_t map);
+extern void (*critical_enter)();
+extern void (*critical_exit)();
 
 //
 // Syscalls

@@ -6,22 +6,18 @@ dbg_command* command;
 
 int yorha_dbg_main_trap_handler(trap_frame_t* ctx, dbg_command* cmd)
 {
-     // command_trap_handler trap_handler;
-    int status = YORHA_SUCCESS;
     command = cmd;
     //
     // Stop all others CPU's to completaly freeze the system
     //
-    kprintf("YorhaDBG Trap handler called, freezing the system...");
+  
+    uint64_t intr = intr_disable();
+    int status = yorha_trap_command_handler(ctx);
+    intr_restore(intr);
 
-
-    status = yorha_trap_command_handler(ctx);
-    //restart_cpus();
-
-    kprintf("Resuming execution...\n");
-    
     return status;
 }
+
 
 int yorha_trap_command_handler(trap_frame_t* ctx)
 {
@@ -31,7 +27,9 @@ int yorha_trap_command_handler(trap_frame_t* ctx)
     uint8_t command_data[0x1000] = {0};
     int status = YORHA_SUCCESS;
     int cmd_loop = true;
-    int sock = listen_port(DBG_TRAP_PORT);
+    
+    struct thread* td = curthread;
+    int sock = listen_port(DBG_TRAP_PORT, td);
 
     if (sock < 0)
     {
@@ -40,10 +38,11 @@ int yorha_trap_command_handler(trap_frame_t* ctx)
     }
 
     kprintf("Wait commands at the trap handler");
-   // stop_other_cpus();
+    
     do
     {    
-        remote_connection = kaccept(sock, NULL, NULL, curthread);
+        kprintf("Waiting new connections...\n");
+        remote_connection = kaccept(sock, NULL, NULL, td);
 
         if (remote_connection < 0)
         {
@@ -52,7 +51,8 @@ int yorha_trap_command_handler(trap_frame_t* ctx)
         }
         
         kprintf("Processing command %d\n", command->header.command_type);
-
+        
+        stop_other_cpus();
         while (true)
         {
             switch (command->header.command_type)
@@ -72,10 +72,10 @@ int yorha_trap_command_handler(trap_frame_t* ctx)
                     kprintf("Unhandled command %d\n", command->header.command_type);  
             }
 
-            if (yorha_trap_dbg_get_new_commands(command_data, 0x1000, remote_connection) == YORHA_FAILURE)
+            if (yorha_trap_dbg_get_new_commands(command_data, 0x1000, remote_connection, td) == YORHA_FAILURE)
             {
                 kprintf("Error reading new commands!\n");
-                cmd_loop = false;
+                //cmd_loop = false;
                 goto close;
                 break;
             }
@@ -84,10 +84,14 @@ int yorha_trap_command_handler(trap_frame_t* ctx)
         }
 
     close:
-        kclose(remote_connection, curthread);
+        kclose(remote_connection, td);
+        restart_cpus();
 
     } while (cmd_loop);
-   
+    
+
+    restart_cpus(); // contains a internal check
+
     return status;
 }
 
@@ -95,17 +99,15 @@ int yorha_trap_command_handler(trap_frame_t* ctx)
 //
 // Read new commands using the debug loop thread and connection socket
 //
-int yorha_trap_dbg_get_new_commands(uint8_t* buff, size_t buff_size, int conn)
+int yorha_trap_dbg_get_new_commands(uint8_t* buff, size_t buff_size, int conn, struct thread* td)
 {
     kprintf("Starting trap frame command handler...\nReading data inside the gate...\n");
 
-    if (kread(conn, buff, buff_size, curthread) > 0)
+    if (kread(conn, buff, buff_size, td) > 0)
     {
         kprintf("Read something...");
         return YORHA_SUCCESS;
     }
-    
-    kprintf("read failed\n");
 
     return YORHA_FAILURE;
 }

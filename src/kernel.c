@@ -159,6 +159,7 @@ void disable_safe_patch()
 }
 
 
+
 void disable_cr0_wp()
 {
     __writecr0(__readcr0() & ~X86_CR0_WP);
