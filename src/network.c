@@ -4,7 +4,7 @@
 //
 // Create a socket and bind to given port, returns the sock
 //
-int listen_port(int port, struct thread* td)
+int listen_port(int port, struct thread* td, int nonblock)
 {
     int sock = ksocket(AF_INET, SOCK_STREAM, 0, td);
 
@@ -14,7 +14,12 @@ int listen_port(int port, struct thread* td)
         return -1;
     } 
 
-    
+    if (nonblock)
+    {
+
+    }
+
+
     struct sockaddr_in sockaddr;
     socklen_t socklen = sizeof(sockaddr);
     sockaddr.sin_len = socklen;

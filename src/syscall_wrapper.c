@@ -146,3 +146,18 @@ int ksendto(int sockfd, const void *buf, size_t len, int flags, const struct soc
     err = ksys_sendto(td, &uap);
     CALL_RET();
 }
+
+int kfcntl(int fd, int cmd, long arg, struct thread* td)
+{
+    CHECK_KERNEL_BASE();
+    struct fcntl_args uap;
+    int err;
+
+    uap.fd = fd;
+    uap.cmd = cmd;
+    uap.arg = arg;
+
+    err = ksys_fcntl(td, &uap);
+    
+    CALL_RET();
+}

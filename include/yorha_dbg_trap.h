@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <sys/types.h>
 #include <sys/proc.h>
+#include <sys/fcntl.h>
 #define _KERNEL
 #include <sys/pcpu.h>
 

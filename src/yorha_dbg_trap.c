@@ -27,9 +27,9 @@ int yorha_trap_command_handler(trap_frame_t* ctx)
     uint8_t command_data[0x1000] = {0};
     int status = YORHA_SUCCESS;
     int cmd_loop = true;
-    
+    int remote_fd_flags;
     struct thread* td = curthread;
-    int sock = listen_port(DBG_TRAP_PORT, td);
+    int sock = listen_port(DBG_TRAP_PORT, td, 1);
 
     if (sock < 0)
     {
@@ -37,12 +37,20 @@ int yorha_trap_command_handler(trap_frame_t* ctx)
         return YORHA_FAILURE;
     }
 
-    kprintf("Wait commands at the trap handler");
+
+
+    kprintf("Wait commands at the trap handler\n");
     
     do
     {    
         kprintf("Waiting new connections...\n");
         remote_connection = kaccept(sock, NULL, NULL, td);
+
+        //
+        // Make the fd non-block to not lock the system
+        //
+        remote_fd_flags = kfcntl(remote_connection, F_GETFL, NULL, td);
+        kfcntl(remote_connection, F_SETFL, remote_fd_flags | O_NONBLOCK, td);
 
         if (remote_connection < 0)
         {

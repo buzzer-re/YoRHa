@@ -58,3 +58,4 @@ extern int (*ksys_read)(struct thread* td, struct read_args* uap);
 extern int (*ksys_accept)(struct thread* td, struct accept_args* uap);
 extern int (*ksys_listen)(struct thread* td, struct listen_args* uap);
 extern int (*ksys_sendto)(struct thread* td, struct sendto_args* uap);
+extern int (*ksys_fcntl)(struct thread* td, struct fcntl_args* uap);

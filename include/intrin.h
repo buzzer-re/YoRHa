@@ -51,12 +51,12 @@ static inline __attribute__((always_inline)) uint64_t read_rflags(void)
     return (rf);
 }
 
-static inline __attribute__((always_inline)) uint64_t write_rflags(uint64_t rf)
+static inline __attribute__((always_inline)) void write_rflags(uint64_t rf)
 {
     __asm__ volatile("pushq %0;  popfq" : : "r" (rf));
 }
 
-static inline __attribute__((always_inline)) uint64_t disable_intr(void)
+static inline __attribute__((always_inline)) void disable_intr(void)
 {
     __asm__ volatile("cli" : : : "memory");
 }
@@ -70,7 +70,7 @@ static inline __attribute__((always_inline)) uint64_t intr_disable(void)
     return (rflags);
 }
 
-static inline __attribute__((always_inline)) uint64_t intr_restore(uint64_t rflags)
+static inline __attribute__((always_inline)) void intr_restore(uint64_t rflags)
 {
     write_rflags(rflags);
 }
