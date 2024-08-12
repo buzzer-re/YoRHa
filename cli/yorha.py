@@ -5,8 +5,8 @@ import construct
 from debugger import *
 
 PS4_IP = "192.168.88.12"
-PS4_CTRL_DBG_PORT = 8883
-PS4_DBG_PORT = 8881
+PS4_CTRL_DBG_PORT = 8887
+PS4_DBG_PORT = 8888
 
 class CommandsCode:
     PAUSE_DBG = 0
@@ -22,6 +22,7 @@ def main():
             cmd_splited = input("> ").split(" ")
             cmd = cmd_splited[0]
             arg = cmd_splited[1] if len(cmd_splited) > 1 else ""
+            arg2 = int(cmd_splited[2], base=16) if len(cmd_splited) > 1 else ""
 
             if cmd == "pause":
                 if debugger.pause_debugger():
@@ -45,7 +46,10 @@ def main():
                 debugger.place_breakpoint(arg)
             
             elif cmd == "memread":
+                print(arg2)
+                print(arg)
                 # Get data over network
+                debugger.memory_read(int(arg, base=16), arg2)
                 pass
             
             elif cmd == "memwrite":

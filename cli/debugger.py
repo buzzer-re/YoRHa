@@ -1,4 +1,4 @@
-from commands import pause, stop, breakpoint, continue_exec, context
+from commands import pause, stop, breakpoint, continue_exec, context, mem_read
 import socket
 
 class Registers:
@@ -88,6 +88,11 @@ class Debugger:
         self.in_dbg_context = False
 
 
+    def memory_read(self, addr, size):
+        memory_read_req = mem_read.MemRead(addr, size)
+        self.__send_cmd(memory_read_req, True, True)
+
+
     def pause_debugger(self) -> bool:
         pause_cmd = pause.PauseDebugger()
         self.__send_cmd(pause_cmd, False, False)
@@ -98,7 +103,6 @@ class Debugger:
         self.__send_cmd(ctx_cmd, True, True)
 
     def place_breakpoint(self, addr):
-        print(f"Placing breakpoint at {addr}")
         addr = int(addr, base=16)
         dbg_cmd = breakpoint.BreakpointCommand(addr)
         self.__send_cmd(dbg_cmd)

@@ -51,7 +51,6 @@ typedef struct __dbg_command_header
     uint64_t argument_size;
 } dbg_command_header;
 
-
 typedef struct __dbg_response_header
 {
     enum dbg_commands_code command_type;

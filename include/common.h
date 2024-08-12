@@ -2,8 +2,8 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-#define DBG_TRAP_PORT 8881
-#define DBG_CTRL_PORT 8883
+#define DBG_TRAP_PORT 8888
+#define DBG_CTRL_PORT 8887
 
 enum 
 {

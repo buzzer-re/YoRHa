@@ -3,7 +3,7 @@ import construct
 
 ## Shared debugger packets between commmands ##
 dbg_request_header = construct.Struct(
-    "cmd_type" / construct.Int32ul,
+    "cmd_type" / construct.Int64ul,
     "argument_size" / construct.Int64ul
 )
 

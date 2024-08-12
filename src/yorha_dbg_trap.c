@@ -79,7 +79,7 @@ int yorha_trap_command_handler(trap_frame_t* ctx)
                 
                 case DBG_PLACE_BREAKPOINT:
                     kprintf("Trap frame: handling with place_breakpoint_trap_handler");
-                    status = place_breakpoint_trap_handler(command, remote_connection, ctx);
+                    //status = place_breakpoint_trap_handler(command, remote_connection, ctx);
                     break;
                 
                 case DBG_CONTINUE:
@@ -88,6 +88,7 @@ int yorha_trap_command_handler(trap_frame_t* ctx)
                     goto close;
 
                 case DBG_MEM_READ:
+                    status = memory_read_trap_handler(command, remote_connection, ctx);
                     break;
 
                 case DBG_CONTEXT:
@@ -179,7 +180,7 @@ int yorha_trap_dbg_get_new_commands(uint8_t* buff, size_t buff_size, int conn, s
 int pause_kernel_trap_handler(dbg_command*, int, trap_frame_t* ctx)
 {
     pause_kernel_response_data_t response = {0};
-    memcpy(&response.trap_frame, &ctx, sizeof(trap_frame_t));
+    memcpy(&response.trap_frame, ctx, sizeof(trap_frame_t));
     //
     // TODO: Read X bytes from RIP, verify if the memory is safe to read
     //
@@ -218,16 +219,30 @@ int place_breakpoint_trap_handler(dbg_command* command, int conn, trap_frame_t* 
 //
 int memory_read_trap_handler(dbg_command* request, int conn, trap_frame_t*)
 {
-    if (request->header.command_type != DBG_MEM_READ) return -1;
+    kprintf("memory_read_trap_handler called\n");
 
+    if (request->header.command_type != DBG_MEM_READ || request->header.argument_size != sizeof(dbg_mem_read_request_t))
+    {
+        kprintf("Invalid request\nargument_size %d expected %d\n", request->header.argument_size, sizeof(dbg_mem_read_request_t));
+        return -1;
+    }
 
-    dbg_mem_read_response_t data = {0};
+    dbg_mem_read_request_t* read_request = (dbg_mem_read_request_t*) request->data;
+    // dbg_mem_read_response_t data = {0};
 
-    data.header.response_size = request->header.argument_size;
-    data.header.command_status = YORHA_SUCCESS;
-    data.header.command_type = DBG_MEM_READ;
+    // data.header.response_size = request->header.argument_size;
+    // data.header.command_status = YORHA_SUCCESS;
+    // data.header.command_type = DBG_MEM_READ;
     
     // memcpy(data.data)
+    uint8_t* base_read = (uint8_t*) read_request->target_addr;
 
+    for (int i = 0; i < read_request->read_size; ++i)
+    {
+        kprintf("%x", base_read[i]);
+    }
+
+    kprintf("\n");
+    
     return -1;
 }
