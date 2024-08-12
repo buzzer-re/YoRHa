@@ -7,6 +7,8 @@ enum dbg_commands_code  {
     DBG_STOP,
     DBG_PLACE_BREAKPOINT,
     DBG_CONTINUE,
+    DBG_CONTEXT,
+    DBG_MEM_READ
 };
 
 enum DbgStatus
@@ -72,33 +74,15 @@ typedef struct __dbg_response
 } dbg_response;
 
 
+
 typedef int(*command_executor)(dbg_command*, int);
 typedef int(*command_trap_handler)(dbg_command*, int, trap_frame_t*);
 
-int pause_kernel_executor(dbg_command*, int);
-int pause_kernel_trap_handler(dbg_command*, int, trap_frame_t*);
-int place_breakpoint_executor(dbg_command*, int);
-int place_breakpoint_trap_handler(dbg_command*, int, trap_frame_t*);
 
-int stop_debugger_executor(dbg_command*, int);
-
-/////////////// PAUSE KERNEL RESPONSE //////////////
-#define PAUSE_KERNEL_CODE_DUMP_SIZE 0x100
-typedef struct __pause_kernel_data
-{
-    dbg_response_header header;
-    trap_frame_t trap_frame;
-    uint8_t code[PAUSE_KERNEL_CODE_DUMP_SIZE]; // a simple 64 bytes dump of the current execution code
-} pause_kernel_response_data_t;
-/////////////// PAUSE KERNEL RESPONSE END ///////////
-
-
-////////////// PLACE BREAKPOINT REQUEST /////////////
-
-typedef struct __breakpoint_request
-{
-    uint64_t* target_address;
-} breakpoint_request_t;
+#include "dbg_commands/pause.h"
+#include "dbg_commands/breakpoint.h"
+#include "dbg_commands/stop.h"
+#include "dbg_commands/mem_rw.h"
 
 
 static void* command_executor_handlers[] = 
@@ -106,13 +90,15 @@ static void* command_executor_handlers[] =
     pause_kernel_executor,
     stop_debugger_executor,
     place_breakpoint_executor,
+    memory_read_executor,
 };
 
 static void* command_trap_handlers[] = 
 {
     pause_kernel_trap_handler, // 0
     NULL, // This will never be called,
-    place_breakpoint_trap_handler
+    place_breakpoint_trap_handler,
+    memory_read_trap_handler
 };
 
 

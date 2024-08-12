@@ -1,12 +1,6 @@
 from .commands import *
 from .pause import *
 
-# typedef struct __breakpoint_request
-# {
-#     uint64_t* target_address;
-# } breakpoint_request_t;
-
-
 breakpoint_request = construct.Struct(
     "header"     / dbg_request_header,
     "target_address" / construct.Int64ul

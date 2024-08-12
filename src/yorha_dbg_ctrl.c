@@ -18,7 +18,7 @@ int yorha_dbg_breakpoint_handler(trap_frame_t* ctx)
         init_kernel();
     }
 
-    if (!current_command || current_command->header.command_type > __max_dbg_trap_handlers) return YORHA_FAILURE;
+    //if (!current_command || current_command->header.command_type > __max_dbg_trap_handlers) return YORHA_FAILURE;
 
     kprintf("Calling yorha_dbg_main_trap_handler ");
     return yorha_dbg_main_trap_handler(ctx, current_command);

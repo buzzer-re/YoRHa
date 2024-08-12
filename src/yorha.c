@@ -26,13 +26,10 @@ int yorha_dbg_start(void*, void*)
     {
         kprintf("Unable to execute YoRHdbg debug server! aborting...\n");
         status = YORHA_FAILURE;
-        goto exit;
     }
 
     kprintf("YoRHa dbg exiting...");
 
-
-exit:
     overwrite_idt_gate(3, (uint64_t) old_int3_gate_addr);
     return status;
 }

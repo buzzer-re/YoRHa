@@ -1,4 +1,4 @@
-from commands import pause, stop, breakpoint
+from commands import pause, stop, breakpoint, continue_exec, context
 import socket
 
 class Registers:
@@ -9,33 +9,42 @@ class Registers:
 class Debugger:
     def __init__(self, host, port, dbg_port, quiet = False):
         self.host = host
-        self.port = port
+        self.ctrl_port = port
         self.socket = None
+        self.dbg_trap_socket = None
         self.quiet = quiet
-        self.dbg_port = dbg_port
-        self.dbg_socket = None
+        self.dbg_trap_port = dbg_port
+        self.dbg_controller_socket = self.connect(self.ctrl_port)
+        self.online = self.dbg_controller_socket != False
+        self.in_dbg_context = False
         self.regs = Registers()
-    
 
-    def connect(self) -> bool:
-        self.socket = socket.socket()
-        self.socket.settimeout(5)
+
+    def connect(self, port) -> int:
+        sock = socket.socket()
+        sock.settimeout(5)
         try:
-            self.socket.connect((self.host, self.port))
-            return True
+            sock.connect((self.host, port))
         except Exception as e:
             if not self.quiet:
                 print("Exception connecting to the PS4  ")
                 print(e)
-            
-        return False
+
+            return False
+        
+        return sock
 
 
     def disconnect(self, unload_dbg=False) -> bool:
         try:
             if unload_dbg:
-                self.__send_cmd(stop.QuitDebugger(), False)
-            self.socket.close()
+                self.__send_cmd(stop.QuitDebugger(), False, False)
+            
+            if self.in_dbg_context:
+                self.dbg_trap_socket.close()
+            
+            self.dbg_controller_socket.close()
+            
             return True
         except Exception as e:
             if not self.quiet:
@@ -44,28 +53,49 @@ class Debugger:
         
         return False
 
-    def __send_cmd(self, command, wait=True) -> str:
+
+
+    def __send_cmd(self, command, wait=True, trap_fame=False) -> bool:
+        sock = self.dbg_controller_socket
+
+        # Create the trap frame connection
+        if trap_fame:
+            if not self.in_dbg_context:
+                self.dbg_trap_socket = self.connect(self.dbg_trap_port)
+                if not self.dbg_trap_socket:
+                    print(f"Unable to connect to the PS4, is the debugger running ?")
+                    return None
+                self.in_dbg_context = True
+
+            sock = self.dbg_trap_socket
+        
         try:
-            self.socket.send(command.serialize())
-            if wait:
-                response = self.socket.recv(command.MAX_SIZE)
+            sock.send(command.serialize())
+
+            if wait:    
+                response = sock.recv(command.MAX_SIZE)
                 command.parse_response(response)
                 command.print_response()
+
         except Exception as e:
             print("Unable to send command!")
             print(e)
 
 
+    def continue_execution(self):
+        continue_cmd = continue_exec.Continue()
+        self.__send_cmd(continue_cmd, False, True)
+        self.in_dbg_context = False
+
+
     def pause_debugger(self) -> bool:
         pause_cmd = pause.PauseDebugger()
-        self.__send_cmd(pause_cmd, False)
-        # self.dbg_socket = socket.socket()
-        # self.dbg_socket.connect((self.host, self.dbg_port))
-        # data = self.dbg_socket.recv(0x1000)
-        # pause_cmd.parse_response(data)
-        # pause_cmd.print_response()
-        # self.__send_cmd(pause_cmd, False)
-        pass
+        self.__send_cmd(pause_cmd, False, False)
+
+
+    def print_context(self) -> bool:
+        ctx_cmd = context.DebuggerContext()
+        self.__send_cmd(ctx_cmd, True, True)
 
     def place_breakpoint(self, addr):
         print(f"Placing breakpoint at {addr}")

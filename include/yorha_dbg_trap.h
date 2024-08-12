@@ -5,6 +5,8 @@
 #include <sys/types.h>
 #include <sys/proc.h>
 #include <sys/fcntl.h>
+#include <sys/select.h>
+#include <sys/time.h>
 #define _KERNEL
 #include <sys/pcpu.h>
 

@@ -11,9 +11,11 @@ int yorha_dbg_main_trap_handler(trap_frame_t* ctx, dbg_command* cmd)
     // Stop all others CPU's to completaly freeze the system
     //
   
-    uint64_t intr = intr_disable();
+    // uint64_t intr = intr_disable();
+    kprintf("dbg_trap_handler called!\n");
+    __asm__("sti");
     int status = yorha_trap_command_handler(ctx);
-    intr_restore(intr);
+    // intr_restore(intr);
 
     return status;
 }
@@ -25,6 +27,13 @@ int yorha_trap_command_handler(trap_frame_t* ctx)
     // Trap frame command handler
     //
     uint8_t command_data[0x1000] = {0};
+
+    //
+    // The trap handler was called outside the dbg controller context
+    //
+    if (command == NULL)
+        command = command_data;
+
     int status = YORHA_SUCCESS;
     int cmd_loop = true;
     int remote_fd_flags;
@@ -37,8 +46,6 @@ int yorha_trap_command_handler(trap_frame_t* ctx)
         return YORHA_FAILURE;
     }
 
-
-
     kprintf("Wait commands at the trap handler\n");
     
     do
@@ -46,36 +53,47 @@ int yorha_trap_command_handler(trap_frame_t* ctx)
         kprintf("Waiting new connections...\n");
         remote_connection = kaccept(sock, NULL, NULL, td);
 
-        //
-        // Make the fd non-block to not lock the system
-        //
-        remote_fd_flags = kfcntl(remote_connection, F_GETFL, NULL, td);
-        kfcntl(remote_connection, F_SETFL, remote_fd_flags | O_NONBLOCK, td);
-
         if (remote_connection < 0)
         {
             kprintf("Error handling connection...aborting\n");
             break;
         }
         
+        //
+        // Make the fd non-block to not lock the system
+        //
+        remote_fd_flags = kfcntl(remote_connection, F_GETFL, NULL, td);
+        kfcntl(remote_connection, F_SETFL, remote_fd_flags | O_NONBLOCK, td);
+
         kprintf("Processing command %d\n", command->header.command_type);
         
-        stop_other_cpus();
+      //  STOP();
         while (true)
         {
             switch (command->header.command_type)
             {
+
                 case DBG_PAUSE:
-                    kprintf("trap_frame: handling with pause_kernel_trap_handler\n");
-                    status = pause_kernel_trap_handler(command, remote_connection, ctx);
+                    kprintf("trap_frame: DBG is paused\n");
                     break;
+                
                 case DBG_PLACE_BREAKPOINT:
                     kprintf("Trap frame: handling with place_breakpoint_trap_handler");
                     status = place_breakpoint_trap_handler(command, remote_connection, ctx);
                     break;
+                
                 case DBG_CONTINUE:
+                    kprintf("Exiting trap frame...\n");
                     cmd_loop = false;
                     goto close;
+
+                case DBG_MEM_READ:
+                    break;
+
+                case DBG_CONTEXT:
+                    status = pause_kernel_trap_handler(command, remote_connection, ctx);
+                    break;
+
                 default:
                     kprintf("Unhandled command %d\n", command->header.command_type);  
             }
@@ -92,13 +110,14 @@ int yorha_trap_command_handler(trap_frame_t* ctx)
         }
 
     close:
+    //    RESTART();
         kclose(remote_connection, td);
-        restart_cpus();
 
     } while (cmd_loop);
     
-
-    restart_cpus(); // contains a internal check
+    kprintf("Closing socket on trap frame handler...\n");
+  //  RESTART(); // contains a internal check
+    kclose(sock, td);
 
     return status;
 }
@@ -109,14 +128,48 @@ int yorha_trap_command_handler(trap_frame_t* ctx)
 //
 int yorha_trap_dbg_get_new_commands(uint8_t* buff, size_t buff_size, int conn, struct thread* td)
 {
+    fd_set readfds;
+    int status;
+    struct timeval tv;
+    
+    FD_ZERO(&readfds);
+    FD_SET(conn, &readfds);
+
+    tv.tv_sec = 5;
+    tv.tv_usec = 0;
+
     kprintf("Starting trap frame command handler...\nReading data inside the gate...\n");
-
-    if (kread(conn, buff, buff_size, td) > 0)
+    
+    while (1)
     {
-        kprintf("Read something...");
-        return YORHA_SUCCESS;
-    }
+        status = kselect(conn + 1, &readfds, NULL, NULL, NULL, td);
+        kprintf("Called select()\n");
+        
+        if (status < 0)
+        {
+            kprintf("select() error when reading remote, aborting...\n");
+            break;
+        }
 
+        if (FD_ISSET(conn, &readfds))
+        {
+            // ugly and dirty hack to make read work, it will not "block" since the fd is ready from the "select()" syscall
+       //     RESTART(); 
+            int length = kread(conn, buff, buff_size, td);
+         //   STOP();
+
+            if (!length)
+            {
+                //
+                // Socket is not ready anymore, read only returns 0
+                //
+                kprintf("Connection not valid anymore!\n");
+                break;
+            }
+            return YORHA_SUCCESS;
+        }
+    }
+    
     return YORHA_FAILURE;
 }
 
@@ -157,4 +210,24 @@ int pause_kernel_trap_handler(dbg_command*, int, trap_frame_t* ctx)
 int place_breakpoint_trap_handler(dbg_command* command, int conn, trap_frame_t* ctx)
 {
     return pause_kernel_trap_handler(command, conn, ctx);
+}
+
+
+//
+// Read memory data
+//
+int memory_read_trap_handler(dbg_command* request, int conn, trap_frame_t*)
+{
+    if (request->header.command_type != DBG_MEM_READ) return -1;
+
+
+    dbg_mem_read_response_t data = {0};
+
+    data.header.response_size = request->header.argument_size;
+    data.header.command_status = YORHA_SUCCESS;
+    data.header.command_type = DBG_MEM_READ;
+    
+    // memcpy(data.data)
+
+    return -1;
 }

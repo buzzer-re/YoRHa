@@ -16,3 +16,4 @@ int kaccept(int sockfd, struct sockaddr *addr, socklen_t *addrlen, struct thread
 int krecvfrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr *src_addr, size_t *addrlen, struct thread* td);
 int ksendto(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, socklen_t addrlen, struct thread* td);
 int kfcntl(int fd, int cmd, long arg, struct thread* td);
+int kselect(int  nfds, fd_set	*readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout, struct thread* td);

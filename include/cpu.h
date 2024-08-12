@@ -13,6 +13,9 @@
 #include <sys/cpuset.h>
 
 
+#define STOP() stop_other_cpus()
+#define RESTART() restart_cpus()
+
 extern int cpu_stopped;
 
 int stop_other_cpus();

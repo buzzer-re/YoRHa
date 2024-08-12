@@ -25,6 +25,7 @@ int (*ksys_accept)(struct thread* td, struct accept_args* uap);
 int (*ksys_listen)(struct thread* td, struct listen_args* uap);
 int (*ksys_sendto)(struct thread* td, struct sendto_args* uap);
 int (*ksys_fcntl)(struct thread* td, struct fcntl_args* uap);
+int (*ksys_select)(struct thread* td, struct select_args* uap);
 
 uint8_t* (*kmem_alloc)(vm_map_t map, size_t size);
 void (*kmem_free)(vm_map_t map, void* addr, size_t size);
@@ -48,8 +49,8 @@ void init_kernel()
 {
     if (kernel_base) return;
 
-    kernel_base = load_kernel_base();
-    sysents     = (struct sysent*) &kernel_base[sysent_offset]; // load syscall table
+    kernel_base     = load_kernel_base();
+    sysents         = (struct sysent*) &kernel_base[sysent_offset]; // load syscall table
     kernel_vmmap    = (vm_map_t) &kernel_base[kkernel_map_offset]; // load vm_map used for memory alloc/free operations by the kernel
     //
     // Load kernel functions
@@ -80,6 +81,7 @@ void init_kernel()
     ksys_accept      =  (int(*)(struct thread* td, struct accept_args* uap)) sysents[SYS_accept].sy_call;
     ksys_sendto      =  (int(*)(struct thread* td, struct sendto_args* uap)) sysents[SYS_sendto].sy_call;
     ksys_fcntl       =  (int(*)(struct thread* td, struct fcntl_args* uap)) sysents[SYS_fcntl].sy_call;
+    ksys_select      =  (int(*)(struct thread* td, struct select_args* uap)) sysents[SYS_select].sy_call;
 }
 
 

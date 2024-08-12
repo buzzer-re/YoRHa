@@ -16,9 +16,8 @@ int listen_port(int port, struct thread* td, int nonblock)
 
     if (nonblock)
     {
-
+        
     }
-
 
     struct sockaddr_in sockaddr;
     socklen_t socklen = sizeof(sockaddr);

@@ -161,3 +161,20 @@ int kfcntl(int fd, int cmd, long arg, struct thread* td)
     
     CALL_RET();
 }
+
+int kselect(int  nfds, fd_set	*readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout, struct thread* td)
+{
+    CHECK_KERNEL_BASE();
+    struct select_args uap;
+    int err;
+
+    uap.nd = nfds;
+    uap.in = readfds;
+    uap.ou = writefds;
+    uap.ex = exceptfds;
+    uap.tv = timeout;
+
+    err = ksys_select(td, &uap);
+
+    CALL_RET();
+}

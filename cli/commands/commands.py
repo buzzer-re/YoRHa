@@ -42,22 +42,24 @@ class DebuggerCommandsCode:
     PAUSE_DEBUGGER      = 0
     STOP_DEBUGGER       = 1
     PLACE_BREAKPOINT    = 2
+    DBG_CONTINUE        = 3
+    DBG_CONTEXT         = 4
+    DBG_MEM_READ        = 5
 
 class Command:
     MAX_SIZE = 0x1000
     def __init__(self, command_code):
         self.command_code = command_code
+        self.response = None
     
     def print_response(self):
         print(self.response)
         pass
 
     def serialize(self) -> bytearray:
-        print(self.command)
         return self.command
     
     def parse_response(self, data):
-        print(data)
         self.response = self.response_struct.parse(data)
 
 
