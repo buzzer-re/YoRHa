@@ -4,7 +4,7 @@ struct dbg_command;
 struct trap_frame_t;
 struct dbg_response_header;
 
-#define PAUSE_KERNEL_CODE_DUMP_SIZE 0x100
+#define PAUSE_KERNEL_CODE_DUMP_SIZE 0x10
 typedef struct __pause_kernel_data
 {
     dbg_response_header header;

@@ -1,5 +1,5 @@
 .vscode/
 build/
-*.bin
+*.bin*
 *.map
 __pycache__/

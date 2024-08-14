@@ -20,6 +20,7 @@ class DebuggerContext(Command):
         print(f"RAX: {hex(self.response.trap_frame.rax)}")
         print(f"RDX: {hex(self.response.trap_frame.rdx)}")
         print(f"RCX: {hex(self.response.trap_frame.rcx)}")
+        print(f"RBX: {hex(self.response.trap_frame.rbx)}")
         print(f"RDI: {hex(self.response.trap_frame.rdi)}")
         print(f"RSI: {hex(self.response.trap_frame.rsi)}")
         print(f"RBP: {hex(self.response.trap_frame.rbp)}")
@@ -32,7 +33,9 @@ class DebuggerContext(Command):
         print(f"R14: {hex(self.response.trap_frame.r14)}")
         print(f"R15: {hex(self.response.trap_frame.r15)}")
 
-        
-        insts = self.disas.disas(self.response.code, self.response.trap_frame.rip)
-        for inst in insts:
-            print(f"{hex(inst.address)}\t {' '.join([hex(x)[2:] for x in inst.bytes])}\t {inst.assembly}")
+        try:
+            insts = self.disas.disas(self.response.code, self.response.trap_frame.rip)
+            for inst in insts:
+                print(f"{hex(inst.address)}\t {' '.join([hex(x)[2:] for x in inst.bytes])}\t {inst.assembly}")
+        except Exception as e:
+            print(e)

@@ -179,6 +179,7 @@ int yorha_trap_dbg_get_new_commands(uint8_t* buff, size_t buff_size, int conn, s
 //
 int pause_kernel_trap_handler(dbg_command*, int, trap_frame_t* ctx)
 {
+    kprintf("pause_kernel_trap_handler\n");
     pause_kernel_response_data_t response = {0};
     memcpy(&response.trap_frame, ctx, sizeof(trap_frame_t));
     //
