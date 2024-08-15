@@ -226,9 +226,11 @@ int memory_read_trap_handler(dbg_command* request, int remote_connection, trap_f
         return YORHA_FAILURE;
     }
 
+    vm_paddr_t p_addr_begin;
+    vm_paddr_t p_addr_end;
+    int status = YORHA_SUCCESS;
     dbg_mem_read_request_t* read_request = (dbg_mem_read_request_t*) request->data;
     size_t total_size = sizeof(dbg_mem_read_response_t) + read_request->read_size;
-    
     //
     // Alloc response struct
     //
@@ -240,33 +242,33 @@ int memory_read_trap_handler(dbg_command* request, int remote_connection, trap_f
         return YORHA_FAILURE;
     }
 
-    // if (read_request->read_size > VM_MAX_KERNEL_ADDRESS)
-    // {
+    p_addr_begin = kpmap_kextract(read_request->target_addr);
+    p_addr_end  = kpmap_kextract(read_request->target_addr + read_request->read_size);
 
-    // }
-    
-    response->header.response_size = request->header.argument_size;
-    response->header.command_status = YORHA_SUCCESS;
-    response->header.command_type = DBG_MEM_READ;
-
-    memcpy(response->data, read_request->target_addr, read_request->read_size);
-    
-    uint8_t* base_read = (uint8_t*) read_request->target_addr;
-
-    for (int i = 0; i < read_request->read_size; ++i)
+    if (p_addr_begin && p_addr_end)
     {
-        kprintf("%x", response->data[i]);
+        kprintf("physical begin: %p\n", p_addr_begin);
+
+        response->header.response_size = read_request->read_size;
+        response->header.command_status = YORHA_SUCCESS;
+        response->header.command_type = DBG_MEM_READ;
+        memcpy(response->data, read_request->target_addr, read_request->read_size);    
+        goto send;
     }
 
-
+    response->header.command_type = DBG_MEM_READ;
+    response->header.command_status = YORHA_INVALID_MEM_ADDRESS;
+    response->header.response_size = 0;
+ 
+ send:
     int res = ksendto(remote_connection, response, total_size, 0, 0, 0, curthread);
     if (res < 0)
     {
         kprintf("Error calling ksendto!\n");
-        return YORHA_FAILURE;
+        status = YORHA_FAILURE;
     }
 
     kfree(response, KM_TEMP);
 
-    return YORHA_SUCCESS;
+    return status;
 }

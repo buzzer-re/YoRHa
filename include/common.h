@@ -9,6 +9,7 @@ enum
 {
     YORHA_SUCCESS = 0,
     YORHA_FAILURE,
+    YORHA_INVALID_MEM_ADDRESS
 };
 
 extern int memcpy(void *dest, const void *src, size_t n);

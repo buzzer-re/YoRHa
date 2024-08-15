@@ -44,6 +44,7 @@ extern void (*critical_enter)();
 extern void (*critical_exit)();
 extern void* (*kmalloc)(unsigned long size, struct malloc_type *mtp, int flags);
 extern void  (*kfree)(void* addr, struct malloc_type *mtp);
+extern vm_paddr_t (*kpmap_kextract)(vm_offset_t* va);
 
 
 //
