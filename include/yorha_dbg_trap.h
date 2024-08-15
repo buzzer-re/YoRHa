@@ -10,7 +10,6 @@
 #define _KERNEL
 #include <sys/pcpu.h>
 
-
 #include "cpu.h"
 #include "kernel.h"
 #include "common.h"

@@ -14,6 +14,7 @@ dbg_response_header = construct.Struct(
 )
 
 
+
 trap_frame_t = construct.Struct(
     "rax"           / construct.Int64ul,
     "rcx"           / construct.Int64ul,
@@ -52,9 +53,9 @@ class Command:
     def __init__(self, command_code):
         self.command_code = command_code
         self.response = None
+        self.raw_data = None
     
     def print_response(self):
-        print(self.response)
         pass
 
     def serialize(self) -> bytearray:
@@ -62,6 +63,7 @@ class Command:
     
     def parse_response(self, data):
         self.response = self.response_struct.parse(data)
+        self.raw_data = data
 
 
 

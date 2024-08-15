@@ -11,6 +11,9 @@ int (*kproc_create)(void (*func)(void *), void *arg, struct proc **newpp, int fl
 void (*kmtx_init)(struct mtx *m, const char *name, const char *type, int opts);
 int (*kgeneric_stop_cpus)(cpuset_t map, uint32_t type);
 int (*krestart_cpus)(cpuset_t map);
+void* (*kmalloc)(unsigned long size, struct malloc_type *mtp, int flags);
+void (*kfree)(void* addr, struct malloc_type *mtp);
+
 
 //
 // Syscalls
@@ -32,6 +35,8 @@ void (*kmem_free)(vm_map_t map, void* addr, size_t size);
 
 uint8_t* kernel_base = 0;
 struct sysent* sysents;
+struct malloc_type* KM_TEMP;
+
 
 //
 // Kernel memory structs
@@ -52,6 +57,7 @@ void init_kernel()
     kernel_base     = load_kernel_base();
     sysents         = (struct sysent*) &kernel_base[sysent_offset]; // load syscall table
     kernel_vmmap    = (vm_map_t) &kernel_base[kkernel_map_offset]; // load vm_map used for memory alloc/free operations by the kernel
+    KM_TEMP          = (struct malloc_type*) &kernel_base[KMEM_TEMP_offset]; // malloc misc temporary data buffers 
     //
     // Load kernel functions
     // 
@@ -68,7 +74,8 @@ void init_kernel()
     kmtx_init           = (void(*)(struct mtx *m, const char *name, const char *type, int opts)) &kernel_base[kmtx_init_offset];
     kgeneric_stop_cpus  = (int (*)(cpuset_t map, uint32_t type)) &kernel_base[kgeneric_stop_cpus_offset];
     krestart_cpus       = (int(*)(cpuset_t map)) &kernel_base[krestart_cpus_offset];
-
+    kmalloc             = (int(*)(unsigned long size, struct malloc_type* mtp, int flags )) &kernel_base[kmalloc_offset];
+    kfree               = (void(*)(void* addr, struct malloc_type* mtp)) &kernel_base[kfree_offset];
     //
     // Load syscalls
     //
@@ -90,45 +97,6 @@ uint8_t* load_kernel_base()
     return &((uint8_t *)__readmsr(MSR_LSTAR))[-xfast_syscall_offset];  
 }
 
-
-//
-// kalloc & kfree inspired in the Mira code
-//
-
-uint64_t* kalloc(size_t alloc_size)
-{
-    // give one size extra, to write the alloc_size
-    alloc_size += sizeof(uint64_t);
-    kprintf("Calling kmem_alloc at %llx size: %d\n", kmem_alloc, alloc_size);
-    uint64_t* buff = (uint64_t*) kmem_alloc(kernel_vmmap, alloc_size);
-    
-    if (!buff)
-    {
-        return 0;
-    }
-    kprintf("Allocated at %llx\nApplying size...\n", buff);
-    //
-    // Write the alloc size
-    //
-    *buff++ = alloc_size; 
-    kprintf("Returning...\n");
-
-    return buff; 
-}
-
-void kfree(uint64_t* data)
-{
-    if (!data) return;
-
-    //
-    // Subtract the pointer by one, now it points to the real begin, which also holds the allocation size
-    //
-    data--;
-    //
-    // free it
-    //
-    kmem_free(kernel_vmmap, data, *data);
-}
 
 //
 // Make the thread enter in a critical region

@@ -19,7 +19,8 @@ def main():
         print(f"PS4 KDebugger connected at {PS4_IP}:{PS4_CTRL_DBG_PORT}.")
         while True:
             # Dummy and dumb cmd handler loop
-            cmd_splited = input("> ").split(" ")
+            dbg_type = "PS4 KDBG" if debugger.in_dbg_context else "PS4 Ctrl" 
+            cmd_splited = input(f"{dbg_type}> ").split(" ")
             cmd = cmd_splited[0]
             arg = cmd_splited[1] if len(cmd_splited) > 1 else ""
             arg2 = int(cmd_splited[2], base=16) if len(cmd_splited) > 1 else ""

@@ -190,8 +190,6 @@ int pause_kernel_trap_handler(dbg_command*, int, trap_frame_t* ctx)
     // TODO: Verify if RIP + PAUSE_KERNEL_CODE_DUMP_SIZE is a valid kernel executable address!
     //
     memcpy(response.code, (const void*) ctx->rip, PAUSE_KERNEL_CODE_DUMP_SIZE);
-
-    
     response.header.command_type = DBG_PAUSE;
     response.header.command_status = YORHA_SUCCESS;
     response.header.response_size = sizeof(response);
@@ -218,32 +216,57 @@ int place_breakpoint_trap_handler(dbg_command* command, int conn, trap_frame_t* 
 //
 // Read memory data
 //
-int memory_read_trap_handler(dbg_command* request, int conn, trap_frame_t*)
+int memory_read_trap_handler(dbg_command* request, int remote_connection, trap_frame_t*)
 {
     kprintf("memory_read_trap_handler called\n");
 
     if (request->header.command_type != DBG_MEM_READ || request->header.argument_size != sizeof(dbg_mem_read_request_t))
     {
         kprintf("Invalid request\nargument_size %d expected %d\n", request->header.argument_size, sizeof(dbg_mem_read_request_t));
-        return -1;
+        return YORHA_FAILURE;
     }
 
     dbg_mem_read_request_t* read_request = (dbg_mem_read_request_t*) request->data;
-    // dbg_mem_read_response_t data = {0};
-
-    // data.header.response_size = request->header.argument_size;
-    // data.header.command_status = YORHA_SUCCESS;
-    // data.header.command_type = DBG_MEM_READ;
+    size_t total_size = sizeof(dbg_mem_read_response_t) + read_request->read_size;
     
-    // memcpy(data.data)
+    //
+    // Alloc response struct
+    //
+    dbg_mem_read_response_t* response = (dbg_mem_read_response_t*) kmalloc(total_size, KM_TEMP, M_WAITOK | M_ZERO); 
+
+    if (!response)
+    {
+        kprintf("malloc() fail, system is out of memory!\n");
+        return YORHA_FAILURE;
+    }
+
+    // if (read_request->read_size > VM_MAX_KERNEL_ADDRESS)
+    // {
+
+    // }
+    
+    response->header.response_size = request->header.argument_size;
+    response->header.command_status = YORHA_SUCCESS;
+    response->header.command_type = DBG_MEM_READ;
+
+    memcpy(response->data, read_request->target_addr, read_request->read_size);
+    
     uint8_t* base_read = (uint8_t*) read_request->target_addr;
 
     for (int i = 0; i < read_request->read_size; ++i)
     {
-        kprintf("%x", base_read[i]);
+        kprintf("%x", response->data[i]);
     }
 
-    kprintf("\n");
-    
-    return -1;
+
+    int res = ksendto(remote_connection, response, total_size, 0, 0, 0, curthread);
+    if (res < 0)
+    {
+        kprintf("Error calling ksendto!\n");
+        return YORHA_FAILURE;
+    }
+
+    kfree(response, KM_TEMP);
+
+    return YORHA_SUCCESS;
 }

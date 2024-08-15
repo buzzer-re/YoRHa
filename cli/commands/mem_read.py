@@ -6,8 +6,6 @@ memory_read_request_t = construct.Struct(
     "target_address" / construct.Int64ul,
     "read_size"     / construct.Int64ul
 )
-
-
 class MemRead(Command):
     def __init__(self, addr, size):
         Command.__init__(self, DebuggerCommandsCode.DBG_MEM_READ)
@@ -23,8 +21,8 @@ class MemRead(Command):
             "target_address": addr,
             "read_size" : size
         })
-
-        print(self.command)
     
     def print_response(self):
-        print(self.response)
+        if self.raw_data:
+            data_read = self.raw_data[self.response.response_size:]
+            print(data_read)

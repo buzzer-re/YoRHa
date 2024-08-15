@@ -19,21 +19,18 @@
         enable_cr0_wp()\
 
 
-
 void init_kernel();
 uint8_t* load_kernel_base();
 void enable_safe_patch();
 void disable_safe_patch();
 void disable_cr0_wp();
 void enable_cr0_wp();
-uint64_t* kalloc(size_t alloc_size);
-void kfree(uint64_t* data);
 
 
 extern uint8_t* kernel_base;
 extern struct sysent* sysents; // syscall table
 
-
+extern struct malloc_type* KM_TEMP;
 
 //
 // Kernel functions
@@ -45,6 +42,9 @@ extern int (*kgeneric_stop_cpus)(cpuset_t map, uint32_t type);
 extern int (*krestart_cpus)(cpuset_t map);
 extern void (*critical_enter)();
 extern void (*critical_exit)();
+extern void* (*kmalloc)(unsigned long size, struct malloc_type *mtp, int flags);
+extern void  (*kfree)(void* addr, struct malloc_type *mtp);
+
 
 //
 // Syscalls
