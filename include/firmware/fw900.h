@@ -22,6 +22,7 @@
 #define krestart_cpus_offset            0x004327f0
 #define kmalloc_offset                  0x00301B20              
 #define kfree_offset                    0x00301CE0     
+#define kcopyin_offset                  0x002716A0
 #define kpmap_extract_offset            0x0012d3b0
 #define KMEM_TEMP_offset                0x015621E0
 

@@ -24,5 +24,8 @@ class MemRead(Command):
     
     def print_response(self):
         if self.raw_data:
-            data_read = self.raw_data[self.response.response_size:]
+            print(self.raw_data)
+            print(f"Read: {self.response.response_size} bytes")
+            data_read = self.raw_data[self.response_struct.sizeof():]
+            print(len(data_read))
             print(data_read)

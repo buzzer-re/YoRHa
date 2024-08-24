@@ -18,6 +18,7 @@ class Debugger:
         self.online = self.dbg_controller_socket != False
         self.in_dbg_context = False
         self.regs = Registers()
+        # self.disas_engine = 
 
 
     def connect(self, port) -> int:
@@ -107,6 +108,11 @@ class Debugger:
         dbg_cmd = breakpoint.BreakpointCommand(addr)
         self.__send_cmd(dbg_cmd)
     
+    def disas(self, addr):
+        memory_read_req = mem_read.MemRead(addr, 100)
+        self.__send_cmd(memory_read_req, wait=True, trap_fame=True)
+        
+
     def context(self):
         pass
 

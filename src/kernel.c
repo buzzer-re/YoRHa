@@ -13,6 +13,8 @@ int (*kgeneric_stop_cpus)(cpuset_t map, uint32_t type);
 int (*krestart_cpus)(cpuset_t map);
 void* (*kmalloc)(unsigned long size, struct malloc_type *mtp, int flags);
 void (*kfree)(void* addr, struct malloc_type *mtp);
+int (*kcopyin)(const void *src, void *dst, size_t len);
+
 vm_paddr_t (*kpmap_kextract)(vm_offset_t* va);
 
 //
@@ -77,6 +79,7 @@ void init_kernel()
     kmalloc             = (int(*)(unsigned long size, struct malloc_type* mtp, int flags )) &kernel_base[kmalloc_offset];
     kfree               = (void(*)(void* addr, struct malloc_type* mtp)) &kernel_base[kfree_offset];
     kpmap_kextract      = (vm_paddr_t(*)(void* va)) &kernel_base[kpmap_extract_offset];
+    kcopyin             = (int(*)(const void *src, void *dst, size_t len)) &kernel_base[kcopyin_offset];
     //
     // Load syscalls
     //

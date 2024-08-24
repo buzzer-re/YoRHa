@@ -148,8 +148,8 @@ int yorha_trap_dbg_get_new_commands(uint8_t* buff, size_t buff_size, int conn, s
         
         if (status < 0)
         {
-            kprintf("select() error when reading remote, aborting...\n");
-            break;
+            // kprintf("select() error when reading remote, aborting...\n");
+            continue;
         }
 
         if (FD_ISSET(conn, &readfds))
@@ -225,9 +225,7 @@ int memory_read_trap_handler(dbg_command* request, int remote_connection, trap_f
         kprintf("Invalid request\nargument_size %d expected %d\n", request->header.argument_size, sizeof(dbg_mem_read_request_t));
         return YORHA_FAILURE;
     }
-
-    vm_paddr_t p_addr_begin;
-    vm_paddr_t p_addr_end;
+    
     int status = YORHA_SUCCESS;
     dbg_mem_read_request_t* read_request = (dbg_mem_read_request_t*) request->data;
     size_t total_size = sizeof(dbg_mem_read_response_t) + read_request->read_size;
@@ -242,25 +240,26 @@ int memory_read_trap_handler(dbg_command* request, int remote_connection, trap_f
         return YORHA_FAILURE;
     }
 
-    p_addr_begin = kpmap_kextract(read_request->target_addr);
-    p_addr_end  = kpmap_kextract(read_request->target_addr + read_request->read_size);
-
-    if (p_addr_begin && p_addr_end)
-    {
-        kprintf("physical begin: %p\n", p_addr_begin);
-
-        response->header.response_size = read_request->read_size;
-        response->header.command_status = YORHA_SUCCESS;
-        response->header.command_type = DBG_MEM_READ;
-        memcpy(response->data, read_request->target_addr, read_request->read_size);    
-        goto send;
-    }
+    int old_flags = disable_thread_pf();
+    int fail = kcopyin(read_request->target_addr, response->data, read_request->read_size);
+    update_thread_flags(old_flags);
 
     response->header.command_type = DBG_MEM_READ;
-    response->header.command_status = YORHA_INVALID_MEM_ADDRESS;
-    response->header.response_size = 0;
- 
- send:
+    //
+    // Maybe add a switch case here to describe which error actually happened, accoding to the manual
+    // https://man.freebsd.org/cgi/man.cgi?query=copyin&sektion=9
+    // 
+    if (!fail)
+    {
+        response->header.response_size = read_request->read_size;
+        response->header.command_status = YORHA_SUCCESS;
+    }
+    else
+    {
+        response->header.command_status = YORHA_INVALID_MEM_ADDRESS;
+        response->header.response_size = 0;
+    }
+
     int res = ksendto(remote_connection, response, total_size, 0, 0, 0, curthread);
     if (res < 0)
     {

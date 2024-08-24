@@ -29,7 +29,6 @@ void enable_cr0_wp();
 
 extern uint8_t* kernel_base;
 extern struct sysent* sysents; // syscall table
-
 extern struct malloc_type* KM_TEMP;
 
 //
@@ -45,6 +44,8 @@ extern void (*critical_exit)();
 extern void* (*kmalloc)(unsigned long size, struct malloc_type *mtp, int flags);
 extern void  (*kfree)(void* addr, struct malloc_type *mtp);
 extern vm_paddr_t (*kpmap_kextract)(vm_offset_t* va);
+extern int (*kcopyin)(const void *src, void *dst, size_t len);
+
 
 
 //
