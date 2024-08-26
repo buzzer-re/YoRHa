@@ -79,7 +79,7 @@ int yorha_dbg_run_debug_server_loop(int port)
             
             kclose(conn, td);
         } 
-
+        kshutdown(sock, SHUT_RDWR, td);
         kclose(sock, td);
     }
 
@@ -144,21 +144,14 @@ int place_breakpoint_executor(dbg_command* command, int)
         kprintf("Wrong argument size! got %d expected %d\n", command->header.argument_size, sizeof(breakpoint_request_t));
         return YORHA_FAILURE;
     }
-    uint8_t old_opcode;
-    uint8_t* code_at;
+
     breakpoint_request_t* breakpoint_request = (breakpoint_request_t*) command->data;
 
-    enable_safe_patch();
-
-    kprintf("Placing breakpoint at %llx\n", breakpoint_request->target_address);
-    code_at = (uint8_t*) *breakpoint_request->target_address;
-    // where do I store that shit ?
-    old_opcode = code_at[0];
-    code_at[0] = INT3;
-    
-    kprintf("Old byte %x\n", old_opcode);
-
-    disable_safe_patch();
+    // if (breakpoint_exists(breakpoint_request->target_address))
+    if (!add_breakpoint(breakpoint_request->target_address))
+    {
+        kprintf("Error setting breakpoint!\n");
+    }
 
     return YORHA_SUCCESS;
 }

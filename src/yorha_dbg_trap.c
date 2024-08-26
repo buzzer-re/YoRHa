@@ -17,6 +17,11 @@ int yorha_dbg_main_trap_handler(trap_frame_t* ctx, dbg_command* cmd)
     int status = yorha_trap_command_handler(ctx);
     // intr_restore(intr);
 
+    if (cmd->header.command_type != DBG_PAUSE)
+    {
+        //remove_breakpoint(--ctx->rip);
+    }
+
     return status;
 }
 
@@ -118,6 +123,8 @@ int yorha_trap_command_handler(trap_frame_t* ctx)
     
     kprintf("Closing socket on trap frame handler...\n");
   //  RESTART(); // contains a internal check
+  
+    kshutdown(sock, SHUT_RDWR, td);
     kclose(sock, td);
 
     return status;
@@ -211,8 +218,6 @@ int place_breakpoint_trap_handler(dbg_command* command, int conn, trap_frame_t* 
 {
     return pause_kernel_trap_handler(command, conn, ctx);
 }
-
-
 //
 // Read memory data
 //
@@ -225,7 +230,7 @@ int memory_read_trap_handler(dbg_command* request, int remote_connection, trap_f
         kprintf("Invalid request\nargument_size %d expected %d\n", request->header.argument_size, sizeof(dbg_mem_read_request_t));
         return YORHA_FAILURE;
     }
-    
+
     int status = YORHA_SUCCESS;
     dbg_mem_read_request_t* read_request = (dbg_mem_read_request_t*) request->data;
     size_t total_size = sizeof(dbg_mem_read_response_t) + read_request->read_size;

@@ -19,7 +19,8 @@ int yorha_dbg_start(void*, void*)
     overwrite_idt_gate(3, (uint64_t) &int_breakpoint_handler);
 
     //
-    // Start the debug loop, in theory we should "never" exit this loop, exiting the debug loop means that the debugger should be disabled
+    // Start the debug loop, in theory we should "never" exit this loop, 
+    // exiting the debug loop means that the debugger should be disabled
     //
     LOG("Starting network debugger on port %d...", DBG_CTRL_PORT);
     if (yorha_dbg_run_debug_server_loop(DBG_CTRL_PORT) != YORHA_SUCCESS)

@@ -6,4 +6,6 @@ class Disassembler:
         self.nyxstone = Nyxstone("x86_64")
 
     def disas(self, data, base_address = 0):
-        return self.nyxstone.disassemble_to_instructions(data, base_address, count=10) 
+        return self.nyxstone.disassemble_to_instructions(data, base_address, count=10)
+    
+    

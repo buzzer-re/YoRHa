@@ -5,7 +5,6 @@ class Registers:
     rax = 0
     rdx = 0
 
-
 class Debugger:
     def __init__(self, host, port, dbg_port, quiet = False):
         self.host = host

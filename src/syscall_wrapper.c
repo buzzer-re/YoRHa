@@ -178,3 +178,17 @@ int kselect(int  nfds, fd_set	*readfds, fd_set *writefds, fd_set *exceptfds, str
 
     CALL_RET();
 }
+
+int kshutdown(int sockfd, int how, struct thread* td)
+{
+    CHECK_KERNEL_BASE();
+    struct shutdown_args uap;
+    int err;
+
+    uap.how = how;
+    uap.s = sockfd;
+    
+    err = ksys_shutdown(td, &uap);
+
+    CALL_RET();
+}

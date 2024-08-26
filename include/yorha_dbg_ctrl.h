@@ -14,6 +14,7 @@
 #include "yorha_dbg_commands.h"
 #include "network.h"
 #include "yorha_dbg_trap.h"
+#include "breakpoint_manager.h"
 
 int yorha_dbg_breakpoint_handler(trap_frame_t* ctx);
 
