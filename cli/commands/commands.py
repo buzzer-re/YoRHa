@@ -47,6 +47,7 @@ class DebuggerCommandsCode:
     DBG_CONTINUE        = 3
     DBG_CONTEXT         = 4
     DBG_MEM_READ        = 5
+    DBG_KPAYLOAD_LOAD   = 6
 
 class Command:
     MAX_SIZE = 0x1000

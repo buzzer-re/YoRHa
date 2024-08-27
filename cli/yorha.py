@@ -53,6 +53,11 @@ def main():
                 debugger.memory_read(int(arg, base=16), arg2)
                 pass
             
+            elif cmd == "load_payload":
+                print(arg2)
+                print(arg)
+                debugger.load_payload(arg)
+
             elif cmd == "memwrite":
                 pass
 

@@ -1,5 +1,6 @@
-from commands import pause, stop, breakpoint, continue_exec, context, mem_read
+from commands import pause, stop, breakpoint, continue_exec, context, mem_read, kpayload_load
 import socket
+import os
 
 class Registers:
     rax = 0
@@ -110,7 +111,16 @@ class Debugger:
     def disas(self, addr):
         memory_read_req = mem_read.MemRead(addr, 100)
         self.__send_cmd(memory_read_req, wait=True, trap_fame=True)
-        
+    
+    def load_payload(self, file_path):
+        if not os.path.exists(file_path):
+            print(f"{file_path} does not exist!")
+            return False
+
+        with open(file_path, "rb") as fd:
+            payload_data = fd.read()
+            kpayload_command_req = kpayload_load.KPayloadLoader(payload_data)
+            self.__send_cmd(kpayload_command_req, wait=False, trap_fame=False)
 
     def context(self):
         pass

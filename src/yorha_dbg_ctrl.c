@@ -110,6 +110,8 @@ int yorha_dbg_handle_command(dbg_command* command, int conn)
                 return stop_debugger_executor(command, conn);
             case DBG_PLACE_BREAKPOINT:
                 return place_breakpoint_executor(command, conn);
+            case DBG_KPAYLOAD_LOADER:
+                return kpayload_loader_executor(command, conn);
             default:
                 kprintf("Invalid command received %d\n", command->header.command_type);
         }
@@ -152,6 +154,44 @@ int place_breakpoint_executor(dbg_command* command, int)
     {
         kprintf("Error setting breakpoint!\n");
     }
+
+    return YORHA_SUCCESS;
+}
+
+//
+// Load a remote code into a separated kproc, with a int3 instruction at the the begin to assist debugging
+//
+int kpayload_loader_executor(dbg_command* command, int onn)
+{
+
+    if (command->header.argument_size != sizeof(kpayload_loader_request_t))
+    {
+        kprintf("Wrong kloader argument size!");
+        return YORHA_FAILURE;
+    }
+
+    kpayload_loader_request_t* kloader_request = (kpayload_loader_request_t*) command->data;
+
+    uint8_t* exec_code = kmalloc(command->header.argument_size + 1, KM_TEMP, M_WAITOK | M_ZERO);
+    
+    if (!exec_code)
+    {
+        kprintf("Unable to allocate kpayload code, system is out-of-memory!\n");
+        return YORHA_FAILURE;
+    }
+
+    exec_code[0] = INT3; // stop at the kpayload entry
+
+    memcpy(exec_code + 1, &kloader_request->payload_begin, command->header.argument_size);
+
+    //
+    // Exec in a separted kproc
+    //
+
+    //
+    // The following kproc will break inside the debugger
+    //
+    kproc_create(exec_code, NULL, NULL, NULL, NULL, "YorhaKLoaderPayload");
 
     return YORHA_SUCCESS;
 }

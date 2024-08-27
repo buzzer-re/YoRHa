@@ -8,7 +8,8 @@ enum dbg_commands_code  {
     DBG_PLACE_BREAKPOINT,
     DBG_CONTINUE,
     DBG_CONTEXT,
-    DBG_MEM_READ
+    DBG_MEM_READ,
+    DBG_KPAYLOAD_LOADER
 };
 
 enum DbgStatus
@@ -83,6 +84,7 @@ typedef int(*command_trap_handler)(dbg_command*, int, trap_frame_t*);
 #include "dbg_commands/breakpoint.h"
 #include "dbg_commands/stop.h"
 #include "dbg_commands/mem_rw.h"
+#include "dbg_commands/load_kpayload.h"
 
 
 static void* command_executor_handlers[] = 
@@ -91,6 +93,7 @@ static void* command_executor_handlers[] =
     stop_debugger_executor,
     place_breakpoint_executor,
     memory_read_executor,
+    kpayload_loader_executor,
 };
 
 static void* command_trap_handlers[] = 
@@ -98,7 +101,8 @@ static void* command_trap_handlers[] =
     pause_kernel_trap_handler, // 0
     NULL, // This will never be called,
     place_breakpoint_trap_handler,
-    memory_read_trap_handler
+    memory_read_trap_handler,
+    NULL
 };
 
 
