@@ -92,6 +92,7 @@ static void* command_executor_handlers[] =
     pause_kernel_executor,
     stop_debugger_executor,
     place_breakpoint_executor,
+    NULL, // continue
     memory_read_executor,
     kpayload_loader_executor,
 };
@@ -101,6 +102,7 @@ static void* command_trap_handlers[] =
     pause_kernel_trap_handler, // 0
     NULL, // This will never be called,
     place_breakpoint_trap_handler,
+    NULL, // continue
     memory_read_trap_handler,
     NULL
 };

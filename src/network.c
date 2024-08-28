@@ -13,12 +13,7 @@ int listen_port(int port, struct thread* td, int nonblock)
         kprintf("Unable to create socket!\n");
         return -1;
     } 
-
-    if (nonblock)
-    {
-        
-    }
-
+    
     struct sockaddr_in sockaddr;
     socklen_t socklen = sizeof(sockaddr);
     sockaddr.sin_len = socklen;

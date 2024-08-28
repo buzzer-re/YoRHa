@@ -34,7 +34,7 @@ int (*ksys_fcntl)(struct thread* td, struct fcntl_args* uap);
 int (*ksys_select)(struct thread* td, struct select_args* uap);
 int (*ksys_shutdown)(struct thread* td, struct shutdown_args* uap);
 
-uint8_t* (*kmem_alloc)(vm_map_t map, size_t size);
+vm_offset_t* (*kmem_alloc)(vm_map_t map, size_t size);
 void (*kmem_free)(vm_map_t map, void* addr, size_t size);
 
 uint8_t* kernel_base = 0;
@@ -58,10 +58,13 @@ void init_kernel()
 {
     if (kernel_base) return;
 
+    //
+    // Load kernel variables
+    //
     kernel_base     = load_kernel_base();
     sysents         = (struct sysent*) &kernel_base[sysent_offset]; // load syscall table
-    kernel_vmmap    = (vm_map_t) &kernel_base[kkernel_map_offset]; // load vm_map used for memory alloc/free operations by the kernel
-    KM_TEMP          = (struct malloc_type*) &kernel_base[KMEM_TEMP_offset]; // malloc misc temporary data buffers 
+    kernel_vmmap    = (vm_map_t) (*(uint64_t*)&kernel_base[kkernel_map_offset]); // load vm_map used for memory alloc/free operations in the kernel space
+    KM_TEMP          = (struct malloc_type*) &kernel_base[KMEM_TEMP_offset]; // malloc temporary data buffers 
     //
     // Load kernel functions
     // 
@@ -73,7 +76,7 @@ void init_kernel()
     ksock_bind          = (int (*)(void* socket, struct sockaddr *addr)) &kernel_base[ksock_bind_offset];
     ksock_recv          = (int (*)(void *socket, void *buf, size_t *len)) &kernel_base[ksock_recv_offset];
     kproc_create        = (int (*)(void (*func)(void *), void *arg, struct proc **newpp, int flags, int pages, const char *fmt, ...)) &kernel_base[kproc_create_offset];
-    kmem_alloc          = (uint8_t*(*)(vm_map_t map, size_t size)) &kernel_base[kmem_alloc_offset];
+    kmem_alloc          = (vm_offset_t*(*)(vm_map_t map, size_t size)) &kernel_base[kmem_alloc_offset];
     kmem_free           = (void(*)(vm_map_t map, void* addr, size_t size)) &kernel_base[kmem_free_offset];
     kmtx_init           = (void(*)(struct mtx *m, const char *name, const char *type, int opts)) &kernel_base[kmtx_init_offset];
     kgeneric_stop_cpus  = (int (*)(cpuset_t map, uint32_t type)) &kernel_base[kgeneric_stop_cpus_offset];

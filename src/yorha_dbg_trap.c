@@ -31,12 +31,12 @@ int yorha_trap_command_handler(trap_frame_t* ctx)
     //
     // Trap frame command handler
     //
-    uint8_t command_data[0x1000] = {0};
+    uint8_t command_data[0x1000] = {0}; // TODO: remove this from stack
 
     //
     // The trap handler was called outside the dbg controller context
     //
-    if (command == NULL)
+    if (!command)
         command = command_data;
 
     int status = YORHA_SUCCESS;

@@ -92,7 +92,7 @@ int yorha_dbg_run_debug_server_loop(int port)
 //
 int yorha_dbg_handle_command(dbg_command* command, int conn)
 {
-    if (command->header.command_type < __max_dbg_commands )
+    if (command->header.command_type <= __max_dbg_commands )
     {
         //
         // Save the current thread pointer and connection, this will be used in the int3 handler
@@ -164,7 +164,8 @@ int place_breakpoint_executor(dbg_command* command, int)
 int kpayload_loader_executor(dbg_command* command, int onn)
 {
 
-    if (command->header.argument_size != sizeof(kpayload_loader_request_t))
+    kprintf("kpayload_loader_executor\n");
+    if (!command->header.argument_size)
     {
         kprintf("Wrong kloader argument size!");
         return YORHA_FAILURE;
@@ -172,13 +173,17 @@ int kpayload_loader_executor(dbg_command* command, int onn)
 
     kpayload_loader_request_t* kloader_request = (kpayload_loader_request_t*) command->data;
 
-    uint8_t* exec_code = kmalloc(command->header.argument_size + 1, KM_TEMP, M_WAITOK | M_ZERO);
-    
+    // TODO: Replace to mmap, dumbass
+    // uint8_t* exec_code = kmalloc(command->header.argument_size + 1, KM_TEMP, M_WAITOK | M_ZERO);
+    uint8_t* exec_code = (uint8_t*) kmem_alloc(kernel_vmmap, command->header.argument_size + 1);
+
     if (!exec_code)
     {
         kprintf("Unable to allocate kpayload code, system is out-of-memory!\n");
         return YORHA_FAILURE;
     }
+
+    kprintf("kpayload address: %p\n", exec_code);
 
     exec_code[0] = INT3; // stop at the kpayload entry
 
@@ -186,16 +191,12 @@ int kpayload_loader_executor(dbg_command* command, int onn)
 
     //
     // Exec in a separted kproc
-    //
-
-    //
     // The following kproc will break inside the debugger
     //
     kproc_create(exec_code, NULL, NULL, NULL, NULL, "YorhaKLoaderPayload");
 
     return YORHA_SUCCESS;
 }
-
 
 //
 // "Stop" the debug loop, which will cause the IDT to be restored and the Yorha dbg ends
