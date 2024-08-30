@@ -21,7 +21,7 @@ enum DbgStatus
 };
 
 
-typedef struct __trap_frame
+typedef struct __attribute__((__packed__)) __trap_frame
 {
     uint64_t rax;
     uint64_t rcx;
@@ -47,13 +47,13 @@ typedef struct __trap_frame
 } trap_frame_t;
 
 
-typedef struct __dbg_command_header
+typedef struct __attribute__((__packed__)) __dbg_command_header
 {
     enum dbg_commands_code command_type;
     uint64_t argument_size;
 } dbg_command_header;
 
-typedef struct __dbg_response_header
+typedef struct __attribute__((__packed__)) __dbg_response_header
 {
     enum dbg_commands_code command_type;
     int command_status;
@@ -61,14 +61,13 @@ typedef struct __dbg_response_header
 } dbg_response_header;
 
 
-typedef struct __dbg_command
+typedef struct __attribute__((__packed__)) __dbg_command
 {
     dbg_command_header header;
-    uint8_t data[];
-} dbg_command;
+} dbg_command_t;
 
 
-typedef struct __dbg_response
+typedef struct __attribute__((__packed__)) __dbg_response
 {
     dbg_response_header header;
     uint8_t data[];
@@ -76,8 +75,8 @@ typedef struct __dbg_response
 
 
 
-typedef int(*command_executor)(dbg_command*, int);
-typedef int(*command_trap_handler)(dbg_command*, int, trap_frame_t*);
+typedef int(*command_executor)(dbg_command_t*, int);
+typedef int(*command_trap_handler)(dbg_command_t*, int, trap_frame_t*);
 
 
 #include "dbg_commands/pause.h"

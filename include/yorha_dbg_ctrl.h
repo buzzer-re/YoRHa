@@ -19,7 +19,7 @@
 int yorha_dbg_breakpoint_handler(trap_frame_t* ctx);
 
 int yorha_dbg_run_debug_server_loop(int port);
-int yorha_dbg_handle_command(dbg_command* command, int conn);
+int yorha_dbg_handle_command(dbg_command_t* command, int conn);
 
 //
 // Command handlers

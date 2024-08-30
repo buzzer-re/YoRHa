@@ -37,3 +37,39 @@ int listen_port(int port, struct thread* td, int nonblock)
 
     return sock;
 }
+
+// size_t get_read_size(int sock, int timeout)
+// {
+//     int old_flags = kfcntl(sock, F_GETFL, NULL, curthread);
+//     if (!old_flags)
+//     {
+//         kprintf("get_read_size(): Invalid socket!\n");
+//         return 0;
+//     }
+//     //
+//     // Set to non-blocking
+//     //
+
+//     fd_set readfds;
+//     int status;
+//     struct timeval tv;
+    
+//     FD_ZERO(&readfds);
+//     FD_SET(sock, &readfds);
+
+//     tv.tv_sec = timeout;
+//     tv.tv_usec = 0;
+
+//     if (! (old_flags & O_NONBLOCK) )
+//         kfcntl(sock, F_SETFL, old_flags | O_NONBLOCK, curthread);
+
+//     int status = kselect(sock + 1, &readfds, NULL, NULL, &tv, curthread);
+
+//     if (status <= 0)
+//     {
+//         kprintf("get_read_size(): Invalid socket! on select()\n");
+//         return 0;
+//     }
+
+
+// }

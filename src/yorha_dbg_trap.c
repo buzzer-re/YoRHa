@@ -2,9 +2,9 @@
 
 
 int remote_connection;
-dbg_command* command;
+dbg_command_t* command;
 
-int yorha_dbg_main_trap_handler(trap_frame_t* ctx, dbg_command* cmd)
+int yorha_dbg_main_trap_handler(trap_frame_t* ctx, dbg_command_t* cmd)
 {
     command = cmd;
     //
@@ -112,7 +112,7 @@ int yorha_trap_command_handler(trap_frame_t* ctx)
                 break;
             }
             
-            command = (dbg_command*) command_data;
+            command = (dbg_command_t*) command_data;
         }
 
     close:
@@ -184,7 +184,7 @@ int yorha_trap_dbg_get_new_commands(uint8_t* buff, size_t buff_size, int conn, s
 //
 // Acquire the information that the kernel had before the pause and send back to the user
 //
-int pause_kernel_trap_handler(dbg_command*, int, trap_frame_t* ctx)
+int pause_kernel_trap_handler(dbg_command_t*, int, trap_frame_t* ctx)
 {
     kprintf("pause_kernel_trap_handler\n");
     pause_kernel_response_data_t response = {0};
@@ -196,7 +196,7 @@ int pause_kernel_trap_handler(dbg_command*, int, trap_frame_t* ctx)
     //
     // TODO: Verify if RIP + PAUSE_KERNEL_CODE_DUMP_SIZE is a valid kernel executable address!
     //
-    memcpy(response.code, (const void*) ctx->rip, PAUSE_KERNEL_CODE_DUMP_SIZE);
+    memcpy(response.code, (const void*) ctx->rip - 1, PAUSE_KERNEL_CODE_DUMP_SIZE);
     response.header.command_type = DBG_PAUSE;
     response.header.command_status = YORHA_SUCCESS;
     response.header.response_size = sizeof(response);
@@ -214,14 +214,14 @@ int pause_kernel_trap_handler(dbg_command*, int, trap_frame_t* ctx)
 //
 // For the response, we can use the same structure as the pause
 //
-int place_breakpoint_trap_handler(dbg_command* command, int conn, trap_frame_t* ctx)
+int place_breakpoint_trap_handler(dbg_command_t* command, int conn, trap_frame_t* ctx)
 {
     return pause_kernel_trap_handler(command, conn, ctx);
 }
 //
 // Read memory data
 //
-int memory_read_trap_handler(dbg_command* request, int remote_connection, trap_frame_t*)
+int memory_read_trap_handler(dbg_command_t* request, int remote_connection, trap_frame_t*)
 {
     kprintf("memory_read_trap_handler called\n");
 

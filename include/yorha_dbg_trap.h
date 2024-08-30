@@ -17,7 +17,7 @@
 #include "yorha_dbg_commands.h"
 #include "network.h"
 
-int yorha_dbg_main_trap_handler(trap_frame_t* ctx, dbg_command* cmd);
+int yorha_dbg_main_trap_handler(trap_frame_t* ctx, dbg_command_t* cmd);
 int yorha_trap_command_handler(trap_frame_t* ctx);
 int yorha_trap_dbg_get_new_commands(uint8_t* buff, size_t buff_size, int conn, struct thread* td);
 

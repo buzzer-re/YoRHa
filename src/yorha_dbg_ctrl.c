@@ -7,7 +7,7 @@ enum DbgStatus dbg_status = IDLE;
 struct sockaddr_in sockaddr;
 int current_connection;
 struct thread* main_thread;
-dbg_command* current_command = NULL;
+dbg_command_t* current_command = NULL;
 
 
 int yorha_dbg_breakpoint_handler(trap_frame_t* ctx)
@@ -34,8 +34,9 @@ int yorha_dbg_run_debug_server_loop(int port)
     {
         return YORHA_FAILURE;
     }
+    dbg_command_t command = {0};
     
-    uint8_t command_data[0x1000];
+    // uint8_t command_data[0x1000];
     size_t cmd_size;
     int conn;
     struct thread* td = curthread;
@@ -65,10 +66,9 @@ int yorha_dbg_run_debug_server_loop(int port)
             // TODO: Send welcome packet with the kernel information
             //
         read_data:
-            if ((cmd_size = kread(conn, command_data, 0x1000, td)) > 0)
-            {
-                dbg_command* command = (dbg_command*) command_data;
-                if (yorha_dbg_handle_command(command, conn) != DBG_STOP)
+            if ((cmd_size = kread(conn, (void*) &command, sizeof(dbg_command_t), td)) > 0)
+            {                
+                if (yorha_dbg_handle_command(&command, conn) != DBG_STOP)
                 {
                     kprintf("Waiting next commands...\n");
                     goto read_data;
@@ -90,7 +90,7 @@ int yorha_dbg_run_debug_server_loop(int port)
 //
 // Handle commands that are supported in a non-paused state
 //
-int yorha_dbg_handle_command(dbg_command* command, int conn)
+int yorha_dbg_handle_command(dbg_command_t* command, int conn)
 {
     if (command->header.command_type <= __max_dbg_commands )
     {
@@ -123,7 +123,7 @@ int yorha_dbg_handle_command(dbg_command* command, int conn)
 //
 // Issue a int3 instruction on the current thread to give control to the trap handler
 //
-int pause_kernel_executor(dbg_command*, int)
+int pause_kernel_executor(dbg_command_t*, int)
 {
     __debugbreak();
     return YORHA_SUCCESS;
@@ -133,24 +133,26 @@ int pause_kernel_executor(dbg_command*, int)
 // Place breakpoint executor, given an address verify if is in kernel space range, and replace the byte with int3
 // If the page is not executable, an error will be sent to the user
 //
-int place_breakpoint_executor(dbg_command* command, int)
+int place_breakpoint_executor(dbg_command_t* command, int conn)
 {
-    //
-    // For safety, the breakpoint should be placed on a freezed state
-    //
-    // return pause_kernel_executor();
-
     if (command->header.argument_size != sizeof(breakpoint_request_t))
     {
-        // return error
         kprintf("Wrong argument size! got %d expected %d\n", command->header.argument_size, sizeof(breakpoint_request_t));
         return YORHA_FAILURE;
     }
 
-    breakpoint_request_t* breakpoint_request = (breakpoint_request_t*) command->data;
+    //
+    // Read breakpoint request
+    //
+    breakpoint_request_t breakpoint_request = {0};
 
-    // if (breakpoint_exists(breakpoint_request->target_address))
-    if (!add_breakpoint(breakpoint_request->target_address))
+    if (kread(conn, (void*) &breakpoint_request, sizeof(breakpoint_request_t), curthread) != command->header.argument_size)
+    {
+        kprintf("Wrong or incomplete breakpoint command data!\n");
+        return YORHA_FAILURE;
+    }
+
+    if (!add_breakpoint(breakpoint_request.target_address))
     {
         kprintf("Error setting breakpoint!\n");
     }
@@ -161,7 +163,7 @@ int place_breakpoint_executor(dbg_command* command, int)
 //
 // Load a remote code into a separated kproc, with a int3 instruction at the the begin to assist debugging
 //
-int kpayload_loader_executor(dbg_command* command, int onn)
+int kpayload_loader_executor(dbg_command_t* command, int conn)
 {
 
     kprintf("kpayload_loader_executor\n");
@@ -171,29 +173,56 @@ int kpayload_loader_executor(dbg_command* command, int onn)
         return YORHA_FAILURE;
     }
 
-    kpayload_loader_request_t* kloader_request = (kpayload_loader_request_t*) command->data;
+    kprintf("Argument_size -> %d\n", command->header.argument_size);
+    kpayload_loader_request_t kloader_request = {0};
 
-    // TODO: Replace to mmap, dumbass
-    // uint8_t* exec_code = kmalloc(command->header.argument_size + 1, KM_TEMP, M_WAITOK | M_ZERO);
-    uint8_t* exec_code = (uint8_t*) kmem_alloc(kernel_vmmap, command->header.argument_size + 1);
-
-    if (!exec_code)
+    //
+    // Read the rest of the request data
+    //
+    if (kread(conn, &kloader_request, sizeof(kpayload_loader_request_t), curthread) != 9)
     {
-        kprintf("Unable to allocate kpayload code, system is out-of-memory!\n");
+        kprintf("Wrong or incomplete kpayload data!\n");
         return YORHA_FAILURE;
     }
 
-    kprintf("kpayload address: %p\n", exec_code);
+    kprintf("Stop_At_entry: %d\nkpayload_size: %d\n", kloader_request.stop_at_entry, kloader_request.payload_size);
+    //
+    // The kmem_alloc above take account that the kmem_alloc patches were already applied by some 
+    // jailbreak, such as Mira or Goldhen. Maybe in future I should add the same kernel patches as part of the YoRHa loading
+    
+    size_t alloc_size = kloader_request.stop_at_entry ? kloader_request.payload_size + 1 : kloader_request.payload_size;
 
-    exec_code[0] = INT3; // stop at the kpayload entry
+    kprintf("Received KPayload with %d bytes!\n", alloc_size);
 
-    memcpy(exec_code + 1, &kloader_request->payload_begin, command->header.argument_size);
+    uint8_t* exec_code = (uint8_t*) kmem_alloc(kernel_vmmap, alloc_size);
+    uint8_t* code = exec_code;
+
+    if (!exec_code)
+    {
+        kprintf("Unable to allocate kpayload code, system is out-of-memory or size to high!\n");
+        return YORHA_FAILURE;
+    }
+
+    kprintf("kpayload address: 0x%llx\n", exec_code);
+
+    if (kloader_request.stop_at_entry)
+    {
+        code[0] = INT3; // stop at the kpayload entry
+        code++;
+    }
 
     //
-    // Exec in a separted kproc
-    // The following kproc will break inside the debugger
+    // Read the kpayload data
     //
-    kproc_create(exec_code, NULL, NULL, NULL, NULL, "YorhaKLoaderPayload");
+    if (kread(conn, code, kloader_request.payload_size, curthread) != kloader_request.payload_size)
+    {
+        kprintf("Wrong or incomplete kpayload data!\n");
+        return YORHA_FAILURE;
+    }
+    //
+    // Exec in a separted kproc which will break inside the debugger
+    //
+    kproc_create( (void (*)(void *)) exec_code, NULL, NULL, NULL, NULL, "YorhaKLoaderPayload");
 
     return YORHA_SUCCESS;
 }
@@ -201,7 +230,7 @@ int kpayload_loader_executor(dbg_command* command, int onn)
 //
 // "Stop" the debug loop, which will cause the IDT to be restored and the Yorha dbg ends
 //
-int stop_debugger_executor(dbg_command*, int)
+int stop_debugger_executor(dbg_command_t*, int)
 {
     kprintf("Exiting debugger...\n");
     dbg_status = STOPPED;
