@@ -214,9 +214,27 @@ int kpayload_loader_executor(dbg_command_t* command, int conn)
     //
     // Read the kpayload data
     //
-    if (kread(conn, code, kloader_request.payload_size, curthread) != kloader_request.payload_size)
+    size_t total_read = 0;
+    size_t chunks = kloader_request.payload_size / PS4_PAGE_SIZE;
+    size_t read_size = 1;
+
+    if (kloader_request.payload_size % PS4_PAGE_SIZE != 0 || !chunks) 
+        chunks++;
+
+    kprintf("%d chunks!\n", chunks);
+
+    // UD right here
+    for (int i = 0; i < chunks || !read_size; ++i)
     {
-        kprintf("Wrong or incomplete kpayload data!\n");
+        read_size = kread(conn, code + total_read, PS4_PAGE_SIZE, curthread);
+        total_read += read_size
+        // kprintf("read %d bytes\n", read);
+        // total_read += read;
+    }
+    
+    if (total_read != kloader_request.payload_size)
+    {
+        kprintf("Wrong or incomplete kpayload data! read %d bytes\n", total_read);
         return YORHA_FAILURE;
     }
     //

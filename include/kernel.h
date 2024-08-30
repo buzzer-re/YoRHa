@@ -19,6 +19,9 @@
         enable_cr0_wp()\
 
 
+#define PS4_PAGE_SIZE 0x4000
+
+
 void init_kernel();
 uint8_t* load_kernel_base();
 void enable_safe_patch();

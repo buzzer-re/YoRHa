@@ -232,7 +232,7 @@ int memory_read_trap_handler(dbg_command_t* request, int remote_connection, trap
     }
 
     int status = YORHA_SUCCESS;
-    dbg_mem_read_request_t* read_request = (dbg_mem_read_request_t*) request->data;
+    dbg_mem_read_request_t* read_request = NULL; //(dbg_mem_read_request_t*) request->data;
     size_t total_size = sizeof(dbg_mem_read_response_t) + read_request->read_size;
     //
     // Alloc response struct
