@@ -214,23 +214,21 @@ int kpayload_loader_executor(dbg_command_t* command, int conn)
     //
     // Read the kpayload data
     //
+    // size_t total_read = 0;
+    // size_t chunks = kloader_request.payload_size / PS4_PAGE_SIZE;
+    // size_t read_size = 1;
+
+    // if (kloader_request.payload_size % PS4_PAGE_SIZE != 0 || !chunks) 
+    //     chunks++;
+
+    // kprintf("%d chunks!\n", chunks);
+
     size_t total_read = 0;
-    size_t chunks = kloader_request.payload_size / PS4_PAGE_SIZE;
-    size_t read_size = 1;
-
-    if (kloader_request.payload_size % PS4_PAGE_SIZE != 0 || !chunks) 
-        chunks++;
-
-    kprintf("%d chunks!\n", chunks);
-
-    // UD right here
-    for (int i = 0; i < chunks || !read_size; ++i)
+    do
     {
-        read_size = kread(conn, code + total_read, PS4_PAGE_SIZE, curthread);
-        total_read += read_size
-        // kprintf("read %d bytes\n", read);
-        // total_read += read;
-    }
+        total_read += kread(conn, code + total_read, kloader_request.payload_size, curthread);
+        kprintf("Read %d bytes in total!\n", total_read);
+    } while (total_read != kloader_request.payload_size);
     
     if (total_read != kloader_request.payload_size)
     {
