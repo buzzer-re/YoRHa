@@ -34,7 +34,7 @@ class DebuggerContext(Command):
         print(f"R15: {hex(self.response.trap_frame.r15)}")
 
         try:
-            insts = self.disas.disas(self.response.code, self.response.trap_frame.rip)
+            insts = self.disas.disas(self.response.code, self.response.trap_frame.rip - 1)
             for inst in insts:
                 print(f"{hex(inst.address)}\t {' '.join([hex(x)[2:] for x in inst.bytes])}\t {inst.assembly}")
         except Exception as e:

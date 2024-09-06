@@ -124,7 +124,13 @@ int yorha_trap_command_handler(trap_frame_t* ctx)
     kprintf("Closing socket on trap frame handler...\n");
   //  RESTART(); // contains a internal check
   
-    kshutdown(sock, SHUT_RDWR, td);
+    int r = kshutdown(sock, SHUT_RDWR, td);
+    
+    if (r == -4)
+    {
+        kprintf("Interrupted syscall!\n");
+    }
+
     kclose(sock, td);
 
     return status;
@@ -200,7 +206,7 @@ int pause_kernel_trap_handler(dbg_command_t*, int, trap_frame_t* ctx)
     response.header.command_type = DBG_PAUSE;
     response.header.command_status = YORHA_SUCCESS;
     response.header.response_size = sizeof(response);
-
+    
     int res = ksendto(remote_connection, &response, sizeof(response), 0, 0, 0, curthread);
     if (res < 0)
     {
@@ -232,7 +238,7 @@ int memory_read_trap_handler(dbg_command_t* request, int remote_connection, trap
     }
 
     int status = YORHA_SUCCESS;
-    dbg_mem_read_request_t* read_request = NULL; //(dbg_mem_read_request_t*) request->data;
+    dbg_mem_read_request_t* read_request = NULL;
     size_t total_size = sizeof(dbg_mem_read_response_t) + read_request->read_size;
     //
     // Alloc response struct

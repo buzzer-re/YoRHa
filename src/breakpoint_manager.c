@@ -32,6 +32,7 @@ int add_breakpoint(uint64_t* addr)
         kprintf("Error reading old_opcode\n");
         return false;
     }
+    
     kprintf("Old opcode: %x\n", old_opcode);
 
 //    stop_other_cpus();

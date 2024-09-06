@@ -24,6 +24,7 @@ int listen_port(int port, struct thread* td, int nonblock)
     if (kbind(sock, (struct sockaddr*) &sockaddr, socklen, td) < 0)
     {
         kprintf("Unable to bind socket %d on port %d\n", sock, port);
+        kshutdown(sock, SHUT_RDWR, td);
         kclose(sock, td);
         return -1;
     }
@@ -31,6 +32,7 @@ int listen_port(int port, struct thread* td, int nonblock)
     if (klisten(sock, 4,td) < 0)
     {
         kprintf("Unable to listen socket %d on port %d\n",sock, port);
+        kshutdown(sock, SHUT_RDWR, td);
         kclose(sock, td);
         return -1;
     }
