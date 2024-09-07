@@ -33,6 +33,7 @@ int (*ksys_sendto)(struct thread* td, struct sendto_args* uap);
 int (*ksys_fcntl)(struct thread* td, struct fcntl_args* uap);
 int (*ksys_select)(struct thread* td, struct select_args* uap);
 int (*ksys_shutdown)(struct thread* td, struct shutdown_args* uap);
+int (*ksys_setsockopt)(struct thread* td, struct setsockopt_args* uap);
 
 vm_offset_t* (*kmem_alloc)(vm_map_t map, size_t size);
 void (*kmem_free)(vm_map_t map, void* addr, size_t size);
@@ -99,6 +100,7 @@ void init_kernel()
     ksys_fcntl       =  (int(*)(struct thread* td, struct fcntl_args* uap)) sysents[SYS_fcntl].sy_call;
     ksys_select      =  (int(*)(struct thread* td, struct select_args* uap)) sysents[SYS_select].sy_call;
     ksys_shutdown    =  (int(*)(struct thread* td, struct shutdown_args* uap)) sysents[SYS_shutdown].sy_call;
+    ksys_setsockopt  =  (int(*)(struct thread* td, struct setsockopt_args* uap)) sysents[SYS_setsockopt].sy_call;
 }
 
 

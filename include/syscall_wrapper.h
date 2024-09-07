@@ -18,3 +18,4 @@ int ksendto(int sockfd, const void *buf, size_t len, int flags, const struct soc
 int kfcntl(int fd, int cmd, long arg, struct thread* td);
 int kselect(int  nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout, struct thread* td);
 int kshutdown(int sockfd, int how, struct thread* td);
+int ksetsockopt(int s, int level, int optname, const void *optval, socklen_t optlen, struct thread* td);

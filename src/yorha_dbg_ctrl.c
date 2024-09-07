@@ -41,7 +41,7 @@ int yorha_dbg_run_debug_server_loop(int port)
     int conn;
     struct thread* td = curthread;
 
-    sock = listen_port(port, td, 0);
+    sock = listen_port(port, td, true);
     if (sock < 0)
     {
         kprintf("Unable to listen at port %d!\n", port);

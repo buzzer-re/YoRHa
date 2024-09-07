@@ -69,3 +69,4 @@ extern int (*ksys_sendto)(struct thread* td, struct sendto_args* uap);
 extern int (*ksys_fcntl)(struct thread* td, struct fcntl_args* uap);
 extern int (*ksys_select)(struct thread* td, struct select_args* uap);
 extern int (*ksys_shutdown)(struct thread* td, struct shutdown_args* uap);
+extern int (*ksys_setsockopt)(struct thread* td, struct setsockopt_args* uap);

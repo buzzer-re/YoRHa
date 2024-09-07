@@ -4,7 +4,7 @@
 //
 // Create a socket and bind to given port, returns the sock
 //
-int listen_port(int port, struct thread* td, int nonblock)
+int listen_port(int port, struct thread* td, int reuse)
 {
     int sock = ksocket(AF_INET, SOCK_STREAM, 0, td);
 
@@ -20,6 +20,11 @@ int listen_port(int port, struct thread* td, int nonblock)
     sockaddr.sin_family = AF_INET;
     sockaddr.sin_port = __builtin_bswap16(port);
     sockaddr.sin_addr.s_addr  = __builtin_bswap32(INADDR_ANY);
+    
+    if (reuse)
+    {
+        ksetsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int), td);
+    }
     
     if (kbind(sock, (struct sockaddr*) &sockaddr, socklen, td) < 0)
     {

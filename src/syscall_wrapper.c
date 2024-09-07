@@ -192,3 +192,20 @@ int kshutdown(int sockfd, int how, struct thread* td)
 
     CALL_RET();
 }
+
+int ksetsockopt(int s, int level, int optname, const void *optval, socklen_t optlen, struct thread* td)
+{
+    CHECK_KERNEL_BASE();
+    struct setsockopt_args uap;
+    int err;
+
+    uap.s = s;
+    uap.level = level;
+    uap.name = optname;
+    uap.val = optval;
+    uap.valsize = optlen;
+
+    err = ksys_setsockopt(td, &uap);
+
+    CALL_RET();
+}

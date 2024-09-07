@@ -43,7 +43,7 @@ int yorha_trap_command_handler(trap_frame_t* ctx)
     int cmd_loop = true;
     int remote_fd_flags;
     struct thread* td = curthread;
-    int sock = listen_port(DBG_TRAP_PORT, td, 1);
+    int sock = listen_port(DBG_TRAP_PORT, td, true);
 
     if (sock < 0)
     {
@@ -124,13 +124,8 @@ int yorha_trap_command_handler(trap_frame_t* ctx)
     kprintf("Closing socket on trap frame handler...\n");
   //  RESTART(); // contains a internal check
   
-    int r = kshutdown(sock, SHUT_RDWR, td);
-    
-    if (r == -4)
-    {
-        kprintf("Interrupted syscall!\n");
-    }
-
+    kshutdown(sock, SHUT_RDWR, td);
+    // setsockopt (SO_REUSEADDR) <--- -TODO
     kclose(sock, td);
 
     return status;
