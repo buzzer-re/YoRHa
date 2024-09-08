@@ -48,6 +48,7 @@ class DebuggerCommandsCode:
     DBG_CONTEXT         = 4
     DBG_MEM_READ        = 5
     DBG_KPAYLOAD_LOAD   = 6
+    BREAKPOINT_LIST     = 7
 
 class Command:
     MAX_SIZE = 0x1000

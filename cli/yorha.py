@@ -52,7 +52,9 @@ def main():
                 # Get data over network
                 debugger.memory_read(int(arg, base=16), arg2)
                 pass
-            
+            elif cmd == "break_list":
+                debugger.list_breakpoints()
+
             elif cmd == "load_payload":
                 print(arg2)
                 print(arg)

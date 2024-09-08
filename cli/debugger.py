@@ -1,4 +1,5 @@
 from commands import pause, stop, breakpoint, continue_exec, context, mem_read, kpayload_load
+from commands.disassembler import Disassembler
 import socket
 import os
 
@@ -18,6 +19,7 @@ class Debugger:
         self.online = self.dbg_controller_socket != False
         self.in_dbg_context = False
         self.regs = Registers()
+        self.disas = Disassembler()
         # self.disas_engine = 
 
 
@@ -77,11 +79,12 @@ class Debugger:
                 response = sock.recv(command.MAX_SIZE)
                 command.parse_response(response)
                 command.print_response()
-
+            return True
         except Exception as e:
             print("Unable to send command!")
             print(e)
 
+        return False
 
     def continue_execution(self):
         continue_cmd = continue_exec.Continue()
@@ -102,11 +105,55 @@ class Debugger:
     def print_context(self) -> bool:
         ctx_cmd = context.DebuggerContext()
         self.__send_cmd(ctx_cmd, True, True)
+        break_list = self.list_breakpoints()
+        if not ctx_cmd:
+            print("System is not in a paused state!")
+            return
+        
+        print(f"RAX: {hex(ctx_cmd.response.trap_frame.rax)}")
+        print(f"RDX: {hex(ctx_cmd.response.trap_frame.rdx)}")
+        print(f"RCX: {hex(ctx_cmd.response.trap_frame.rcx)}")
+        print(f"RBX: {hex(ctx_cmd.response.trap_frame.rbx)}")
+        print(f"RDI: {hex(ctx_cmd.response.trap_frame.rdi)}")
+        print(f"RSI: {hex(ctx_cmd.response.trap_frame.rsi)}")
+        print(f"RBP: {hex(ctx_cmd.response.trap_frame.rbp)}")
+        print(f"RSP: {hex(ctx_cmd.response.trap_frame.rsp)}")
+        print(f"R8: {hex(ctx_cmd.response.trap_frame.r8)}")
+        print(f"R9: {hex(ctx_cmd.response.trap_frame.r9)}")
+        print(f"R10: {hex(ctx_cmd.response.trap_frame.r11)}")
+        print(f"R12: {hex(ctx_cmd.response.trap_frame.r12)}")
+        print(f"R13: {hex(ctx_cmd.response.trap_frame.r13)}")
+        print(f"R14: {hex(ctx_cmd.response.trap_frame.r14)}")
+        print(f"R15: {hex(ctx_cmd.response.trap_frame.r15)}")
+        print(f"RIP: {hex(ctx_cmd.response.trap_frame.rip)}")
+                
+        try:
+            # Filter breakpoints
+            if break_list and break_list.num_breakpoints > 0:
+                print(break_list.breakpoints_lookup)
+                for i, code in enumerate(ctx_cmd.response.code):
+                    addr = ctx_cmd.response.trap_frame.rip + i - 1 # Minus 1 because RIP points to the next instruction
+                    if addr in break_list.breakpoints_lookup:
+                        ctx_cmd.response.code[i] = break_list.breakpoints_lookup[addr].old_opcode
+
+            insts = self.disas.disas(ctx_cmd.response.code, ctx_cmd.response.trap_frame.rip - 1)
+
+            for inst in insts:
+                print(f"{hex(inst.address)}\t {' '.join([hex(x)[2:] for x in inst.bytes])}\t {inst.assembly}",  end="")
+
+                if break_list and inst.address in break_list.breakpoints_lookup:
+                    print("; Software Breakpoint", end="")
+
+                print()
+
+        except Exception as e:
+            print(bytearray(ctx_cmd.response.code))
+            print(e)
 
     def place_breakpoint(self, addr):
         addr = int(addr, base=16)
         dbg_cmd = breakpoint.BreakpointCommand(addr)
-        self.__send_cmd(dbg_cmd)
+        self.__send_cmd(dbg_cmd, wait=False)
     
     def disas(self, addr):
         memory_read_req = mem_read.MemRead(addr, 100)
@@ -122,6 +169,15 @@ class Debugger:
             kpayload_command_req = kpayload_load.KPayloadLoader(payload_data)
             self.__send_cmd(kpayload_command_req, wait=False, trap_fame=False)
 
+
+    def list_breakpoints(self):
+        list_bp = breakpoint.ListBreakpoints()
+        if self.__send_cmd(list_bp, True, False):
+            return list_bp
+        else:
+            print("Error listing breakpoints")
+        return None
+    
     def context(self):
         pass
 
