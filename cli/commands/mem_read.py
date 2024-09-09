@@ -21,6 +21,8 @@ class MemRead(Command):
             "target_address": addr,
             "read_size" : size
         })
+
+        self.max_size = self.response_struct.sizeof() + size
     
     def print_response(self):
         if self.raw_data:

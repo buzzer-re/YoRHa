@@ -74,7 +74,7 @@ class Debugger:
             sock.send(command.serialize())
 
             if wait:    
-                response = sock.recv(command.MAX_SIZE)
+                response = sock.recv(command.max_size)
                 command.parse_response(response)
                 command.print_response()
             return True
@@ -162,7 +162,7 @@ class Debugger:
         memory_read_req = mem_read.MemRead(addr, 100)
         self.__send_cmd(memory_read_req, wait=True, trap_fame=True)
     
-    
+
     def load_payload(self, file_path):
         if not os.path.exists(file_path):
             print(f"{file_path} does not exist!")

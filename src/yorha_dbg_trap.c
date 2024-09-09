@@ -247,10 +247,12 @@ int memory_read_trap_handler(dbg_command_t* request, int remote_connection, trap
         return YORHA_FAILURE;
     }
 
+    int fail = 0;
     size_t total_size = sizeof(dbg_mem_read_response_t) + read_request.read_size;
     //
     // Alloc response struct
     //
+    kprintf("Allocating %d bytes to read address %llx\n", total_size, read_request.target_addr);
     dbg_mem_read_response_t* response = (dbg_mem_read_response_t*) kmalloc(total_size, KM_TEMP, M_WAITOK | M_ZERO); 
 
     if (!response)
@@ -259,9 +261,32 @@ int memory_read_trap_handler(dbg_command_t* request, int remote_connection, trap
         return YORHA_FAILURE;
     }
 
-    int old_flags = disable_thread_pf();
-    int fail = kcopyin(read_request.target_addr, response->data, read_request.read_size);
-    update_thread_flags(old_flags);
+    // int old_flags = disable_thread_pf();
+    if (read_request.read_size > PS4_PAGE_SIZE)
+    {
+        // 
+        // Paginate read
+        //
+        size_t chunks = read_request.read_size / PS4_PAGE_SIZE;
+        size_t remain = read_request.read_size % PS4_PAGE_SIZE;
+        kprintf("%d chunks, remaining %d bytes\n", chunks, remain);
+        for (size_t i = 0; i < chunks && !fail; ++i)
+        {
+            kprintf("memread chunk %d (0x%llx\n)\n", i, read_request.target_addr + (PS4_PAGE_SIZE * i));
+            fail = kcopyin(read_request.target_addr + (PS4_PAGE_SIZE * i), &response->data[PS4_PAGE_SIZE * i], PS4_PAGE_SIZE);
+        }
+        
+        if (remain && !fail)
+        {
+            fail = kcopyin(read_request.target_addr + (PS4_PAGE_SIZE * chunks), &response->data[PS4_PAGE_SIZE * chunks], remain);
+        }
+    }
+    else
+    {
+        fail = kcopyin(read_request.target_addr, response->data, read_request.read_size);
+    }
+
+    // update_thread_flags(old_flags);
 
     response->header.command_type = DBG_MEM_READ;
     //
@@ -270,11 +295,13 @@ int memory_read_trap_handler(dbg_command_t* request, int remote_connection, trap
     // 
     if (!fail)
     {
+        kprintf("Failed to read\n");
         response->header.response_size = read_request.read_size;
         response->header.command_status = YORHA_SUCCESS;
     }
     else
     {
+
         response->header.command_status = YORHA_INVALID_MEM_ADDRESS;
         response->header.response_size = 0;
     }

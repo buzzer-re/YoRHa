@@ -52,11 +52,11 @@ class DebuggerCommandsCode:
     BREAKPOINT_REMOVE   = 8
 
 class Command:
-    MAX_SIZE = 0x1000
     def __init__(self, command_code):
         self.command_code = command_code
         self.response = None
         self.raw_data = None
+        self.max_size = 0x4000
     
     def print_response(self):
         pass
