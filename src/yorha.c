@@ -62,7 +62,7 @@ void overwrite_idt_gate(int interruption_number, uint64_t gate_addr)
     LOG("Interruption %d (0x%llx) handler now is at -> 0x%llx\n", interruption_number, idt_entry, UNPACK_HANDLER_ADDR(idt_entry));
 
     disable_safe_patch();
-
+    
 }
 
 

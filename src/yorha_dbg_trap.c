@@ -295,13 +295,12 @@ int memory_read_trap_handler(dbg_command_t* request, int remote_connection, trap
     // 
     if (!fail)
     {
-        kprintf("Failed to read\n");
         response->header.response_size = read_request.read_size;
         response->header.command_status = YORHA_SUCCESS;
     }
     else
     {
-
+        kprintf("memread: Failed to read with code %d\n", fail);
         response->header.command_status = YORHA_INVALID_MEM_ADDRESS;
         response->header.response_size = 0;
     }

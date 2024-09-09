@@ -50,10 +50,8 @@ struct malloc_type* KM_TEMP;
 vm_map_t kernel_vmmap;
 
 //
-// Init kernel pointers
+// Init kernel fptrs and syscalls
 //
-//
-// Only for fw 9.0, for now...
 // 
 void init_kernel()
 {
