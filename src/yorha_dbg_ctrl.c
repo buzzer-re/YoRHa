@@ -35,8 +35,7 @@ int yorha_dbg_run_debug_server_loop(int port)
         return YORHA_FAILURE;
     }
     dbg_command_t command = {0};
-    
-    // uint8_t command_data[0x1000];
+
     size_t cmd_size;
     int conn;
     struct thread* td = curthread;
@@ -74,7 +73,7 @@ int yorha_dbg_run_debug_server_loop(int port)
                     goto read_data;
                 }
 
-                kprintf("Received DBG_STOP command from remote, closing connection...\n");
+                kprintf("An error happened when processing command %d from remote, closing connection...\n", command.header.command_type);
             }
             
             kclose(conn, td);
@@ -112,6 +111,10 @@ int yorha_dbg_handle_command(dbg_command_t* command, int conn)
                 return place_breakpoint_executor(command, conn);
             case DBG_KPAYLOAD_LOADER:
                 return kpayload_loader_executor(command, conn);
+            case DBG_LIST_BREAKPOINT:
+                return list_breakpoint_executor(command, conn);
+            case DBG_REMOVE_BREAKPOINT:
+                return remove_breakpoint_executor(command, conn);
             default:
                 kprintf("Invalid command received %d\n", command->header.command_type);
         }
@@ -133,32 +136,32 @@ int pause_kernel_executor(dbg_command_t*, int)
 // Place breakpoint executor, given an address verify if is in kernel space range, and replace the byte with int3
 // If the page is not executable, an error will be sent to the user
 //
-int place_breakpoint_executor(dbg_command_t* command, int conn)
-{
-    if (command->header.argument_size != sizeof(breakpoint_request_t))
-    {
-        kprintf("Wrong argument size! got %d expected %d\n", command->header.argument_size, sizeof(breakpoint_request_t));
-        return YORHA_FAILURE;
-    }
+// int place_breakpoint_executor(dbg_command_t* command, int conn)
+// {
+//     if (command->header.argument_size != sizeof(breakpoint_request_t))
+//     {
+//         kprintf("Wrong argument size! got %d expected %d\n", command->header.argument_size, sizeof(breakpoint_request_t));
+//         return YORHA_FAILURE;
+//     }
 
-    //
-    // Read breakpoint request
-    //
-    breakpoint_request_t breakpoint_request = {0};
+//     //
+//     // Read breakpoint request
+//     //
+//     breakpoint_request_t breakpoint_request = {0};
 
-    if (kread(conn, (void*) &breakpoint_request, sizeof(breakpoint_request_t), curthread) != command->header.argument_size)
-    {
-        kprintf("Wrong or incomplete breakpoint command data!\n");
-        return YORHA_FAILURE;
-    }
+//     if (kread(conn, (void*) &breakpoint_request, sizeof(breakpoint_request_t), curthread) != command->header.argument_size)
+//     {
+//         kprintf("Wrong or incomplete breakpoint command data!\n");
+//         return YORHA_FAILURE;
+//     }
 
-    if (!add_breakpoint(breakpoint_request.target_address))
-    {
-        kprintf("Error setting breakpoint!\n");
-    }
+//     if (!add_breakpoint(breakpoint_request.target_address))
+//     {
+//         kprintf("Error setting breakpoint!\n");
+//     }
 
-    return YORHA_SUCCESS;
-}
+//     return YORHA_SUCCESS;
+// }
 
 //
 // Load a remote code into a separated kproc, with a int3 instruction at the the begin to assist debugging
@@ -214,27 +217,14 @@ int kpayload_loader_executor(dbg_command_t* command, int conn)
     //
     // Read the kpayload data
     //
-    // size_t total_read = 0;
-    // size_t chunks = kloader_request.payload_size / PS4_PAGE_SIZE;
-    // size_t read_size = 1;
-
-    // if (kloader_request.payload_size % PS4_PAGE_SIZE != 0 || !chunks) 
-    //     chunks++;
-
-    // kprintf("%d chunks!\n", chunks);
-
     size_t total_read = 0;
+    kprintf("Reading kpayload...\n");
     do
     {
         total_read += kread(conn, code + total_read, kloader_request.payload_size, curthread);
-        kprintf("Read %d bytes in total!\n", total_read);
     } while (total_read != kloader_request.payload_size);
     
-    if (total_read != kloader_request.payload_size)
-    {
-        kprintf("Wrong or incomplete kpayload data! read %d bytes\n", total_read);
-        return YORHA_FAILURE;
-    }
+    kprintf("Read %d bytes!\n", total_read);
     //
     // Exec in a separted kproc which will break inside the debugger
     //
@@ -253,5 +243,87 @@ int stop_debugger_executor(dbg_command_t*, int)
 
     return YORHA_SUCCESS;
 }
+
+
+// int list_breakpoint_executor_wrapper(dbg_command_t*, int conn)
+// {
+//     return list_breakpoint_executor(NULL, conn);
+// //     // return list_breakpoints_shared_cmd(NULL, conn);
+// //     kprintf("list_breakpoint_executor\n");
+// //     size_t num_breakpoints = 0;
+// //     int status = YORHA_SUCCESS;
+// //     size_t total_breakpoints_bytes = 0;
+// //     size_t alloc_size;
+// //     breakpoint_entry_t* breakpoint_list = get_breakpoint_addresses(&num_breakpoints);
+// //     breakpoint_list_response_t* response;
+    
+// //     kprintf("num_breakpoints: %d\n", num_breakpoints);
+// //     if (!breakpoint_list || !num_breakpoints)
+// //     {
+// //         kprintf("Error on get_breakpoint_addresses\n");
+// //         alloc_size = sizeof(breakpoint_list_response_t);
+// //         response = kmalloc(alloc_size, KM_TEMP, M_WAITOK | M_ZERO);
+// //         status = YORHA_FAILURE;
+// //         goto send;
+// //     } 
+
+// //     total_breakpoints_bytes = sizeof(breakpoint_entry_t) * num_breakpoints;
+// //     alloc_size = num_breakpoints * sizeof(breakpoint_entry_t) + sizeof(breakpoint_list_response_t);
+// //     response = kmalloc(alloc_size, KM_TEMP, M_WAITOK | M_ZERO);
+
+// //     if (!response)
+// //     {
+// //         kprintf("System is out-of-memory!\n");
+// //         return YORHA_FAILURE;
+// //     }
+
+// //     memcpy(&response->breakpoint_entry, breakpoint_list, total_breakpoints_bytes);
+    
+// // send:    
+// //     response->header.command_status = status;
+// //     response->header.command_type = DBG_LIST_BREAKPOINT;
+// //     response->header.response_size = total_breakpoints_bytes;
+// //     response->num_breakpoints = num_breakpoints;
+
+// //     int res = ksendto(conn, response, alloc_size, 0, 0, 0, curthread);
+
+// //     kfree(response, KM_TEMP);
+
+// //     if (res < 0)
+// //     {
+// //         kprintf("list_breakpoint_executor(): Error calling ksendto!\n");
+// //         return YORHA_FAILURE;
+// //     }
+    
+    
+// //     return YORHA_SUCCESS;
+// }
+
+
+// int remove_breakpoint_executor_wrapper(dbg_command_t* command, int conn)
+// {
+//     return remove_breakpoint_executor(command, conn);
+//     // if (command->header.argument_size != sizeof(breakpoint_remove_request_t))
+//     // {
+//     //     kprintf("remove_breakpoint_executor: Wrong argument size! got %d bytes expected %d\n", command->header.argument_size, sizeof(breakpoint_remove_request_t));
+//     //     return YORHA_FAILURE;
+//     // }
+
+//     // breakpoint_remove_request_t request = {0};
+
+//     // if (kread(conn, (void*) &request, sizeof(breakpoint_remove_request_t), curthread) != command->header.argument_size)
+//     // {
+//     //     kprintf("remove_breakpoint_executor: Wrong or incomplete breakpoint command data!\n");
+//     //     return YORHA_FAILURE;
+//     // }
+
+//     // if (!remove_breakpoint(request.target_addr))
+//     // {
+//     //     kprintf("Unable to remove breakpoint %llx\n", request.target_addr);
+//     //     return YORHA_FAILURE;
+//     // }
+
+//     // return YORHA_SUCCESS;
+// }
 
 

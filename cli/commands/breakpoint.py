@@ -70,5 +70,25 @@ class ListBreakpoints(Command):
             breakpoint_list_raw = breakpoint_list_raw[breakpoint_entry_t.sizeof():]
 
     def print_response(self):
-        print(self.breakpoints_lookup)
-        pass
+        print(self.num_breakpoints)
+        if self.num_breakpoints != 0:
+            for addr, info in self.breakpoints_lookup.items():
+                print(f"{hex(addr)}:")
+                print(f"\tOriginal opcode:{info.old_opcode}\n\tEnabled: {info.enabled == 1}")
+
+
+class RemoveBreakpoint(Command):
+        def __init__(self, address):
+            Command.__init__(self, DebuggerCommandsCode.BREAKPOINT_REMOVE)
+            Command.__init__(self, DebuggerCommandsCode.BREAKPOINT_REMOVE)
+            self.command_code = DebuggerCommandsCode.BREAKPOINT_REMOVE
+            self.response_struct = pause_debugger_response
+            request  = dbg_request_header.build({
+                    "cmd_type"  : DebuggerCommandsCode.BREAKPOINT_REMOVE,
+                    "argument_size" : 8
+            })
+            self.command = breakpoint_request.build({
+                "header" : dbg_request_header.parse(request),
+                "target_address" : address
+            })
+    

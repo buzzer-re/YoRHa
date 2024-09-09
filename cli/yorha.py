@@ -55,6 +55,9 @@ def main():
             elif cmd == "break_list":
                 debugger.list_breakpoints()
 
+            elif cmd == "remove_breakpoint":
+                debugger.remove_breakpoint(arg)
+
             elif cmd == "load_payload":
                 print(arg2)
                 print(arg)

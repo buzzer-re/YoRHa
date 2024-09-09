@@ -48,7 +48,6 @@ int kbind(int socket, struct sockaddr* addr, size_t addrlen, struct thread* td)
     uap.name = (char*) addr;
     uap.s = socket;
     
-
     err = ksys_bind(td, &uap);
     CALL_RET();
 }
@@ -62,6 +61,7 @@ int krecvfrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr *src
 
     struct recvfrom_args uap;
     int err;
+    
     uap.buf = buf;
     uap.s = sockfd;
     uap.len = len;

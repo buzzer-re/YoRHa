@@ -20,8 +20,6 @@ class Debugger:
         self.in_dbg_context = False
         self.regs = Registers()
         self.disas = Disassembler()
-        # self.disas_engine = 
-
 
     def connect(self, port) -> int:
         sock = socket.socket()
@@ -130,7 +128,6 @@ class Debugger:
         try:
             # Filter breakpoints
             if break_list and break_list.num_breakpoints > 0:
-                print(break_list.breakpoints_lookup)
                 for i, code in enumerate(ctx_cmd.response.code):
                     addr = ctx_cmd.response.trap_frame.rip + i - 1 # Minus 1 because RIP points to the next instruction
                     if addr in break_list.breakpoints_lookup:
@@ -153,11 +150,18 @@ class Debugger:
     def place_breakpoint(self, addr):
         addr = int(addr, base=16)
         dbg_cmd = breakpoint.BreakpointCommand(addr)
-        self.__send_cmd(dbg_cmd, wait=False)
+        self.__send_cmd(dbg_cmd, wait=False, trap_fame=self.in_dbg_context)
     
+
+    def remove_breakpoint(self, addr):
+        addr = int(addr, base=16)
+        break_del_cmd = breakpoint.RemoveBreakpoint(addr)
+        self.__send_cmd(break_del_cmd, wait=False, trap_fame=self.in_dbg_context)
+
     def disas(self, addr):
         memory_read_req = mem_read.MemRead(addr, 100)
         self.__send_cmd(memory_read_req, wait=True, trap_fame=True)
+    
     
     def load_payload(self, file_path):
         if not os.path.exists(file_path):
@@ -172,7 +176,7 @@ class Debugger:
 
     def list_breakpoints(self):
         list_bp = breakpoint.ListBreakpoints()
-        if self.__send_cmd(list_bp, True, False):
+        if self.__send_cmd(list_bp, wait=True, trap_fame=self.in_dbg_context):
             return list_bp
         else:
             print("Error listing breakpoints")

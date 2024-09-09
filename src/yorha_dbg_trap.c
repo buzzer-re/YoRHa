@@ -7,19 +7,18 @@ dbg_command_t* command;
 int yorha_dbg_main_trap_handler(trap_frame_t* ctx, dbg_command_t* cmd)
 {
     command = cmd;
-    //
-    // Stop all others CPU's to completaly freeze the system
-    //
-  
-    // uint64_t intr = intr_disable();
-    kprintf("dbg_trap_handler called!\n");
     __asm__("sti");
     int status = yorha_trap_command_handler(ctx);
-    // intr_restore(intr);
 
-    if (cmd->header.command_type != DBG_PAUSE)
+    //
+    // Restore old opcode from the soft breakpoint
+    //
+    if (cmd->header.command_type != DBG_PAUSE && get_breakpoint_entry(ctx->rip - 1))
     {
-        //remove_breakpoint(--ctx->rip);
+        remove_breakpoint(--ctx->rip);
+        //
+        // otherwise, this is not a user controlled intr
+        //
     }
 
     return status;
@@ -31,13 +30,14 @@ int yorha_trap_command_handler(trap_frame_t* ctx)
     //
     // Trap frame command handler
     //
-    uint8_t command_data[0x1000] = {0}; // TODO: remove this from stack
+    // TODO: remove this from stack
+    dbg_command_t current_command = {0};
 
     //
     // The trap handler was called outside the dbg controller context
     //
     if (!command)
-        command = command_data;
+        command = &current_command;
 
     int status = YORHA_SUCCESS;
     int cmd_loop = true;
@@ -82,11 +82,6 @@ int yorha_trap_command_handler(trap_frame_t* ctx)
                     kprintf("trap_frame: DBG is paused\n");
                     break;
                 
-                case DBG_PLACE_BREAKPOINT:
-                    kprintf("Trap frame: handling with place_breakpoint_trap_handler");
-                    //status = place_breakpoint_trap_handler(command, remote_connection, ctx);
-                    break;
-                
                 case DBG_CONTINUE:
                     kprintf("Exiting trap frame...\n");
                     cmd_loop = false;
@@ -99,20 +94,30 @@ int yorha_trap_command_handler(trap_frame_t* ctx)
                 case DBG_CONTEXT:
                     status = pause_kernel_trap_handler(command, remote_connection, ctx);
                     break;
+                
+                case DBG_PLACE_BREAKPOINT:
+                    status = place_breakpoint_executor(command, remote_connection);
+                    break;
+
+                case DBG_LIST_BREAKPOINT:
+                    status = list_breakpoint_executor(command, remote_connection);
+                    break;
+
+                case DBG_REMOVE_BREAKPOINT:
+                    status = remove_breakpoint_executor(command, remote_connection);
+                    break;
 
                 default:
                     kprintf("Unhandled command %d\n", command->header.command_type);  
             }
 
-            if (yorha_trap_dbg_get_new_commands(command_data, 0x1000, remote_connection, td) == YORHA_FAILURE)
+            if (yorha_trap_dbg_get_new_commands(command, remote_connection, td) == YORHA_FAILURE)
             {
                 kprintf("Error reading new commands!\n");
                 //cmd_loop = false;
                 goto close;
                 break;
-            }
-            
-            command = (dbg_command_t*) command_data;
+            }            
         }
 
     close:
@@ -125,7 +130,6 @@ int yorha_trap_command_handler(trap_frame_t* ctx)
   //  RESTART(); // contains a internal check
   
     kshutdown(sock, SHUT_RDWR, td);
-    // setsockopt (SO_REUSEADDR) <--- -TODO
     kclose(sock, td);
 
     return status;
@@ -135,7 +139,7 @@ int yorha_trap_command_handler(trap_frame_t* ctx)
 //
 // Read new commands using the debug loop thread and connection socket
 //
-int yorha_trap_dbg_get_new_commands(uint8_t* buff, size_t buff_size, int conn, struct thread* td)
+int yorha_trap_dbg_get_new_commands(dbg_command_t* command, int conn, struct thread* td)
 {
     fd_set readfds;
     int status;
@@ -164,7 +168,7 @@ int yorha_trap_dbg_get_new_commands(uint8_t* buff, size_t buff_size, int conn, s
         {
             // ugly and dirty hack to make read work, it will not "block" since the fd is ready from the "select()" syscall
        //     RESTART(); 
-            int length = kread(conn, buff, buff_size, td);
+            int length = kread(conn, command, sizeof(dbg_command_t), td);
          //   STOP();
 
             if (!length)
@@ -198,6 +202,7 @@ int pause_kernel_trap_handler(dbg_command_t*, int, trap_frame_t* ctx)
     // TODO: Verify if RIP + PAUSE_KERNEL_CODE_DUMP_SIZE is a valid kernel executable address!
     //
     memcpy(response.code, (const void*) ctx->rip - 1, PAUSE_KERNEL_CODE_DUMP_SIZE);
+    
     response.header.command_type = DBG_PAUSE;
     response.header.command_status = YORHA_SUCCESS;
     response.header.response_size = sizeof(response);
@@ -219,6 +224,7 @@ int place_breakpoint_trap_handler(dbg_command_t* command, int conn, trap_frame_t
 {
     return pause_kernel_trap_handler(command, conn, ctx);
 }
+
 //
 // Read memory data
 //
@@ -233,8 +239,15 @@ int memory_read_trap_handler(dbg_command_t* request, int remote_connection, trap
     }
 
     int status = YORHA_SUCCESS;
-    dbg_mem_read_request_t* read_request = NULL;
-    size_t total_size = sizeof(dbg_mem_read_response_t) + read_request->read_size;
+    dbg_mem_read_request_t read_request;
+
+    if (kread(remote_connection, (void*) &read_request, sizeof(dbg_mem_read_request_t), curthread) != command->header.argument_size)
+    {
+        kprintf("Wrong or incomplete mem_read command data!\n");
+        return YORHA_FAILURE;
+    }
+
+    size_t total_size = sizeof(dbg_mem_read_response_t) + read_request.read_size;
     //
     // Alloc response struct
     //
@@ -247,7 +260,7 @@ int memory_read_trap_handler(dbg_command_t* request, int remote_connection, trap
     }
 
     int old_flags = disable_thread_pf();
-    int fail = kcopyin(read_request->target_addr, response->data, read_request->read_size);
+    int fail = kcopyin(read_request.target_addr, response->data, read_request.read_size);
     update_thread_flags(old_flags);
 
     response->header.command_type = DBG_MEM_READ;
@@ -257,7 +270,7 @@ int memory_read_trap_handler(dbg_command_t* request, int remote_connection, trap
     // 
     if (!fail)
     {
-        response->header.response_size = read_request->read_size;
+        response->header.response_size = read_request.read_size;
         response->header.command_status = YORHA_SUCCESS;
     }
     else

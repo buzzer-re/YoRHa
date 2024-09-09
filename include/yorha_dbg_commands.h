@@ -9,7 +9,9 @@ enum dbg_commands_code  {
     DBG_CONTINUE,
     DBG_CONTEXT,
     DBG_MEM_READ,
-    DBG_KPAYLOAD_LOADER
+    DBG_KPAYLOAD_LOADER,
+    DBG_LIST_BREAKPOINT,
+    DBG_REMOVE_BREAKPOINT
 };
 
 enum DbgStatus
@@ -58,7 +60,7 @@ typedef struct __attribute__((__packed__)) __dbg_response_header
     enum dbg_commands_code command_type;
     int command_status;
     uint64_t response_size;
-} dbg_response_header;
+} dbg_response_header, dbg_response_header_t;
 
 
 typedef struct __attribute__((__packed__)) __dbg_command
@@ -94,6 +96,8 @@ static void* command_executor_handlers[] =
     NULL, // continue
     memory_read_executor,
     kpayload_loader_executor,
+    list_breakpoint_executor,
+    remove_breakpoint_executor
 };
 
 static void* command_trap_handlers[] = 
@@ -103,7 +107,9 @@ static void* command_trap_handlers[] =
     place_breakpoint_trap_handler,
     NULL, // continue
     memory_read_trap_handler,
-    NULL
+    NULL,
+    list_breakpoint_trap_handler,
+    remove_breakpoint_trap_handler
 };
 
 

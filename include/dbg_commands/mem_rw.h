@@ -14,8 +14,18 @@ typedef struct __attribute__((__packed__)) __dbg_mem_read_request
     size_t      read_size;
 } dbg_mem_read_request_t; 
 
+typedef struct __attribute__((__packed__)) __dbg_mem_write_request
+{
+    uint64_t*   target_addr;
+    size_t      read_size;
+} dbg_mem_write_request_t; 
+
+
 
 int memory_read_executor(dbg_command_t*, int);
 int memory_read_trap_handler(dbg_command_t*, int, trap_frame_t*);
+
+int memory_write_executor(dbg_command_t*, int);
+int memory_write_trap_handler(dbg_command_t*, int, trap_frame_t*);
 
 // TODO: Mem write

@@ -7,7 +7,7 @@
 
 
 
-typedef struct __breakpoint_entry
+typedef struct __attribute__((__packed__)) __breakpoint_entry
 {
     uint64_t* address;
     uint8_t old_opcode;
@@ -17,6 +17,8 @@ typedef struct __breakpoint_entry
 
 
 int add_breakpoint(uint64_t* addr);
-
+int remove_breakpoint(uint64_t* addr);
+breakpoint_entry_t* get_breakpoint_entry(uint64_t* addr);
+breakpoint_entry_t* get_breakpoint_addresses(size_t* len);
 
 
