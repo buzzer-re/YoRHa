@@ -23,7 +23,7 @@ def main():
             cmd_splited = input(f"{dbg_type}> ").split(" ")
             cmd = cmd_splited[0]
             arg = cmd_splited[1] if len(cmd_splited) > 1 else ""
-            arg2 = int(cmd_splited[2], base=16) if len(cmd_splited) > 1 else ""
+            arg2 = cmd_splited[2] if len(cmd_splited) > 1 else ""
 
             if cmd == "pause":
                 if debugger.pause_debugger():
@@ -50,7 +50,7 @@ def main():
                 print(arg2)
                 print(arg)
                 # Get data over network
-                debugger.memory_read(int(arg, base=16), arg2)
+                debugger.memory_read(int(arg, base=16), int(arg2, base=16))
                 pass
             elif cmd == "break_list":
                 debugger.list_breakpoints()
@@ -64,8 +64,14 @@ def main():
                 debugger.load_payload(arg)
 
             elif cmd == "memwrite":
+                addr = int(arg, base=16)
+                data = open(arg2, "rb").read()
+                debugger.write_memory(addr, data)
                 pass
-
+            
+            elif cmd == "set_thread_context_test":
+                debugger.set_thread_ctx()
+                
             elif cmd == "assemble":
                 pass
     else:

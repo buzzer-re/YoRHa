@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../cpu.h"
+
 struct dbg_command_t;
 struct trap_frame_t;
 struct dbg_response_header;

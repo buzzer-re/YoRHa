@@ -1,4 +1,5 @@
-from commands import pause, stop, breakpoint, continue_exec, context, mem_read, kpayload_load
+from commands import mem_io
+from commands import pause, stop, breakpoint, continue_exec, context, kpayload_load
 from commands.disassembler import Disassembler
 import socket
 import os
@@ -91,8 +92,8 @@ class Debugger:
 
 
     def memory_read(self, addr, size):
-        memory_read_req = mem_read.MemRead(addr, size)
-        self.__send_cmd(memory_read_req, True, True)
+        memory_read_req = mem_io.MemRead(addr, size)
+        self.__send_cmd(memory_read_req, True, trap_fame=self.in_dbg_context)
 
 
     def pause_debugger(self) -> bool:
@@ -153,13 +154,21 @@ class Debugger:
         self.__send_cmd(dbg_cmd, wait=False, trap_fame=self.in_dbg_context)
     
 
+    def write_memory(self, addr, data):
+        dbg_cmd = mem_io.MemWrite(addr, data)
+        self.__send_cmd(dbg_cmd, wait=False, trap_fame=self.in_dbg_context)
+
+    def set_thread_ctx(self):
+        dbg_cmd = context.SetThreadContext()
+        self.__send_cmd(dbg_cmd, wait=False, trap_fame=True)
+
     def remove_breakpoint(self, addr):
         addr = int(addr, base=16)
         break_del_cmd = breakpoint.RemoveBreakpoint(addr)
         self.__send_cmd(break_del_cmd, wait=False, trap_fame=self.in_dbg_context)
 
     def disas(self, addr):
-        memory_read_req = mem_read.MemRead(addr, 100)
+        memory_read_req = mem_io.MemRead(addr, 100)
         self.__send_cmd(memory_read_req, wait=True, trap_fame=True)
     
 

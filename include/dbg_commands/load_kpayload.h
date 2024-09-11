@@ -1,5 +1,8 @@
 #pragma once
 
+#include <sys/stdint.h>
+#include "../syscall_wrapper.h"
+
 struct dbg_command_t;
 struct trap_frame_t;
 

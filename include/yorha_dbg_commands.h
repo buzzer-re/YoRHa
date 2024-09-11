@@ -1,6 +1,6 @@
 #pragma once
 #include "common.h"
-
+#include "cpu.h"
 
 enum dbg_commands_code  {
     DBG_PAUSE = 0,
@@ -11,7 +11,9 @@ enum dbg_commands_code  {
     DBG_MEM_READ,
     DBG_KPAYLOAD_LOADER,
     DBG_LIST_BREAKPOINT,
-    DBG_REMOVE_BREAKPOINT
+    DBG_REMOVE_BREAKPOINT,
+    DBG_MEM_WRITE,
+    DBG_SET_THREAD_CONTEXT
 };
 
 enum DbgStatus
@@ -21,33 +23,6 @@ enum DbgStatus
     STOPPED,
     ERROR
 };
-
-
-typedef struct __attribute__((__packed__)) __trap_frame
-{
-    uint64_t rax;
-    uint64_t rcx;
-    uint64_t rdx;
-    uint64_t rbx;
-    uint64_t rbp;
-    uint64_t rsi;
-    uint64_t rdi;
-    uint64_t r8;
-    uint64_t r9;
-    uint64_t r10;
-    uint64_t r11;
-    uint64_t r12;
-    uint64_t r13;
-    uint64_t r14;
-    uint64_t r15;
-   // uint64_t error_code;
-    uint64_t rip;
-    uint64_t cs;
-    uint64_t eflags;
-    uint64_t rsp;
-    uint64_t ss;
-} trap_frame_t;
-
 
 typedef struct __attribute__((__packed__)) __dbg_command_header
 {
@@ -86,6 +61,7 @@ typedef int(*command_trap_handler)(dbg_command_t*, int, trap_frame_t*);
 #include "dbg_commands/stop.h"
 #include "dbg_commands/mem_rw.h"
 #include "dbg_commands/load_kpayload.h"
+#include "dbg_commands/set_context.h"
 
 
 static void* command_executor_handlers[] = 
@@ -97,7 +73,9 @@ static void* command_executor_handlers[] =
     memory_read_executor,
     kpayload_loader_executor,
     list_breakpoint_executor,
-    remove_breakpoint_executor
+    remove_breakpoint_executor,
+    memory_write_executor,
+    NULL
 };
 
 static void* command_trap_handlers[] = 
@@ -109,7 +87,9 @@ static void* command_trap_handlers[] =
     memory_read_trap_handler,
     NULL,
     list_breakpoint_trap_handler,
-    remove_breakpoint_trap_handler
+    remove_breakpoint_trap_handler,
+    memory_write_trap_handler,
+    set_thread_context_trap_handler
 };
 
 

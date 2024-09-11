@@ -50,6 +50,8 @@ class DebuggerCommandsCode:
     DBG_KPAYLOAD_LOAD   = 6
     BREAKPOINT_LIST     = 7
     BREAKPOINT_REMOVE   = 8
+    DBG_MEM_WRITE       = 9
+    DBG_SET_THREAD_CONTEXT = 10
 
 class Command:
     def __init__(self, command_code):

@@ -20,5 +20,5 @@
 
 int yorha_dbg_main_trap_handler(trap_frame_t* ctx, dbg_command_t* cmd);
 int yorha_trap_command_handler(trap_frame_t* ctx);
-yorha_trap_dbg_get_new_commands(dbg_command_t* command, int conn, struct thread* td);
+int yorha_trap_dbg_get_new_commands(dbg_command_t* command, int conn, struct thread* td);
 

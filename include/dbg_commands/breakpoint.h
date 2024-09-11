@@ -2,7 +2,9 @@
 
 #include <sys/stdint.h>
 #include "../breakpoint_manager.h"
+#include "../syscall_wrapper.h"
 
+struct dbg_response_t;
 struct dbg_command_t;
 struct trap_frame_t;
 
