@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "ea3f84623b654b17d8a10414833d00e4856eadfde03e23ab4b7a4410e8d25f0c"
+            "sha256": "331efd3743aa5c36f2b37887daecc0df0e274891fd34a6cd0962cc2b16caee3a"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -25,12 +25,21 @@
             "markers": "python_version >= '3.6'",
             "version": "==2.10.70"
         },
-        "nyxstone": {
+        "prompt-toolkit": {
             "hashes": [
-                "sha256:91da0fd313ab107b98f88397573a76dbb7eb780f5da74f579052438f47543d88"
+                "sha256:0d7bfa67001d5e39d02c224b663abc33687405033a8c422d0d675a5a13361d10",
+                "sha256:1e1b29cb58080b1e69f207c893a1a7bf16d127a5c30c9d17a25a5d77792e5360"
             ],
             "index": "pypi",
-            "version": "==0.1.0"
+            "markers": "python_full_version >= '3.7.0'",
+            "version": "==3.0.47"
+        },
+        "wcwidth": {
+            "hashes": [
+                "sha256:3da69048e4540d84af32131829ff948f1e022c1c6bdb8d6102117aac784f6859",
+                "sha256:72ea0c06399eb286d978fdedb6923a9eb47e1c486ce63e9b4e64fc18303972b5"
+            ],
+            "version": "==0.2.13"
         }
     },
     "develop": {}

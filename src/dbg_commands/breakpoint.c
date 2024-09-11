@@ -1,7 +1,4 @@
 #include "../../include/yorha_dbg_commands.h"
-
-
-
 //
 // Place breakpoint executor, given an address verify if is in kernel space range, and replace the byte with int3
 // If the page is not executable, an error will be sent to the user

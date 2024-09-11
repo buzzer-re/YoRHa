@@ -4,8 +4,8 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-nyxstone = "*"
 construct = "*"
+prompt-toolkit = "*"
 
 [dev-packages]
 

@@ -17,8 +17,12 @@ class Debugger:
         self.quiet = quiet
         self.dbg_trap_port = dbg_port
         self.dbg_controller_socket = self.connect(self.ctrl_port)
-        self.online = self.dbg_controller_socket != False
-        self.in_dbg_context = False
+        
+        if not self.dbg_controller_socket:
+            self.dbg_trap_socket = self.connect(self.dbg_trap_port)
+
+        self.online = self.dbg_controller_socket != False or self.dbg_trap_socket != False
+        self.in_dbg_context = self.dbg_trap_socket != False
         self.regs = Registers()
         self.disas = Disassembler()
 
