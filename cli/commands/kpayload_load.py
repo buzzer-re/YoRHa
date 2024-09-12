@@ -7,6 +7,10 @@ kpayload_loader_request_t = construct.Struct(
 )
 
 class KPayloadLoader(Command):
+    ARGUMENTS = [
+        CommandArgument("path", ["--path"], "Filepath to the kernel payload", arg_type=str)
+    ]
+
     def __init__(self, payload_data):
         self.data = payload_data
         Command.__init__(self, DebuggerCommandsCode.DBG_KPAYLOAD_LOAD)
@@ -22,7 +26,4 @@ class KPayloadLoader(Command):
             "kpayload_size" : len(payload_data)
         })
         
-        print( kpayload_loader_request_t.sizeof())
-
-        print(len(payload_data))
         self.command += payload_data

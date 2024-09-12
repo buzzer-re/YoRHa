@@ -21,7 +21,8 @@ AVAILABLE_COMMANDS = {
     "break"     : breakpoint.BreakpointCommand,
     "breakdel"  : breakpoint.RemoveBreakpoint,
     "unload"    : None,
-    "setr"      : context.SetThreadContext
+    "setr"      : context.SetThreadContext,
+    "load_kpayload" : kpayload_load.KPayloadLoader
 }
 
 def hex2int_from_list(l):
@@ -96,7 +97,8 @@ class Debugger:
             "break"     : self.__breakpoint,
             "breakdel"  : self.__remove_breakpoint,
             "unload"    : self.disconnect,
-            "setr"      : self.__set_thread_context
+            "setr"      : self.__set_thread_context,
+            "load_kpayload" : self.__load_kpayload
         }
 
     def connect(self, port) -> int:
@@ -304,12 +306,16 @@ class Debugger:
         self.__send_cmd(dbg_cmd, wait=False, trap_fame=True)
     
 
-    def load_payload(self, file_path):
-        if not os.path.exists(file_path):
-            print(f"{file_path} does not exist!")
+    def __load_kpayload(self, args):
+        args = parse_args(args, kpayload_load.KPayloadLoader.ARGUMENTS)
+        if not args:
             return False
-
-        with open(file_path, "rb") as fd:
+        
+        if not os.path.exists(args.path):
+            print("Invalid kpayload path!")
+            return False
+        
+        with open(args.path, "rb") as fd:
             payload_data = fd.read()
             kpayload_command_req = kpayload_load.KPayloadLoader(payload_data)
             self.__send_cmd(kpayload_command_req, wait=False, trap_fame=False)
