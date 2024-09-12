@@ -1,12 +1,18 @@
 from commands import mem_io
-from commands import pause, stop, breakpoint, continue_exec, context, kpayload_load
+from commands import pause, stop, breakpoint, continue_exec, context, kpayload_load, disas
 from commands.disassembler import Disassembler
 import socket
+import argparse
 import os
 
 class Registers:
     rax = 0
     rdx = 0
+
+
+AVAILABLE_COMMANDS = {
+    "disas" : disas.Disassemble
+}
 
 class Debugger:
     def __init__(self, host, port, dbg_port, quiet = False):
@@ -22,9 +28,12 @@ class Debugger:
             self.dbg_trap_socket = self.connect(self.dbg_trap_port)
 
         self.online = self.dbg_controller_socket != False or self.dbg_trap_socket != False
-        self.in_dbg_context = self.dbg_trap_socket != False
+        self.in_dbg_context = self.dbg_trap_socket != None
         self.regs = Registers()
         self.disas = Disassembler()
+        self.dispatcher = {
+            "disas" : self.__disassemble
+        }
 
     def connect(self, port) -> int:
         sock = socket.socket()
@@ -60,10 +69,8 @@ class Debugger:
         return False
 
 
-
     def __send_cmd(self, command, wait=True, trap_fame=False) -> bool:
         sock = self.dbg_controller_socket
-
         # Create the trap frame connection
         if trap_fame:
             if not self.in_dbg_context:
@@ -88,6 +95,35 @@ class Debugger:
             print(e)
 
         return False
+
+
+    def launch_cmd(self, cmd, args):
+        if cmd in self.dispatcher:
+            self.dispatcher[cmd](cmd, args)
+        
+    
+
+    def __disassemble(self, cmd: str, args: list) -> bool:
+        for i in range(len(args)):
+            try:
+                if "0x" in args[i]:
+                    args[i] = str(int(args[i], base=16))
+            except: continue
+        
+        parser = argparse.ArgumentParser(add_help=False)
+        parser.add_argument("address", type=int)
+        parser.add_argument("-c", "--count", type=int)
+        parser._print_message = lambda x, y: None
+        parsed = None
+        try:
+            parsed = parser.parse_args(args)
+        except:
+            print(f"Wrong usage of command: {cmd}")
+            return False
+        
+        disas_cmd = disas.Disassemble(parsed.address, parsed.count)
+        self.__send_cmd(disas_cmd, wait=True, trap_fame=self.in_dbg_context)
+        
 
     def continue_execution(self):
         continue_cmd = continue_exec.Continue()

@@ -1,6 +1,5 @@
 import construct
 
-
 ## Shared debugger packets between commmands ##
 dbg_request_header = construct.Struct(
     "cmd_type" / construct.Int32ul,
@@ -40,6 +39,14 @@ trap_frame_t = construct.Struct(
 )
 
 
+
+
+class CommandArgument:
+    def __init__(self, arg_name, tokens, description):
+        self.arg_name = arg_name
+        self.tokens = tokens
+        self.description = description
+
 class DebuggerCommandsCode:
     PAUSE_DEBUGGER      = 0
     STOP_DEBUGGER       = 1
@@ -52,6 +59,8 @@ class DebuggerCommandsCode:
     BREAKPOINT_REMOVE   = 8
     DBG_MEM_WRITE       = 9
     DBG_SET_THREAD_CONTEXT = 10
+
+
 
 class Command:
     def __init__(self, command_code):

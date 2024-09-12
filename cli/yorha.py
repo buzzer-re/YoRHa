@@ -2,10 +2,12 @@ from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import WordCompleter
 from prompt_toolkit import print_formatted_text as print
 from prompt_toolkit.history import FileHistory
+from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
+from prompt_toolkit.completion import Completer, Completion
+
 from configparser import ConfigParser
 import os
 import re
-import time
 from time import sleep
 import sys
 
@@ -97,8 +99,20 @@ def main2():
 dbg_cmd_completer = WordCompleter(['pause', 'context', 'unload', 'continue','c', 'quit', 'q', 'break', 'b', 'memread', 'break_list', 'bl', 'break_delete', 'bd', 'load_kpayload', 'memwrite', 'set_reg', 'asm'], ignore_case=True)
 
 
-
-#
+class DbgCommandCompleter(Completer):
+    def get_completions(self, document, complete_event):
+        command_tokens = document.text.split(" ")
+        if len(command_tokens) > 1:
+            command = command_tokens[0]
+            if command in AVAILABLE_COMMANDS:
+                for command, obj in AVAILABLE_COMMANDS.items():
+                    for argument in obj.ARGUMENTS:
+                        for token in argument.tokens:
+                            yield Completion(token, start_position=0)
+        else:    
+            for command in AVAILABLE_COMMANDS.keys():
+                yield Completion(command, start_position=0)
+        
 # Create a new config
 #
 def create_config() -> bool:
@@ -147,9 +161,10 @@ def print_banner():
     
     sleep(1)
     print("\n\n")
-    
+
+
 def main():
-    print_banner()
+    # print_banner()
     if not os.path.exists(HISTFILE):
         open(HISTFILE, "w").close()
     
@@ -167,7 +182,7 @@ def main():
 
     print(f"PlayStation 4 Host: {ip}")
 
-    session = PromptSession(completer=dbg_cmd_completer, history=FileHistory(HISTFILE))
+    session = PromptSession(completer=DbgCommandCompleter(), history=FileHistory(HISTFILE), auto_suggest=AutoSuggestFromHistory())
     print(f"[+] Starting connection with {ip}...", end=" ")
 
     debugger = Debugger(ip, PS4_CTRL_DBG_PORT, PS4_DBG_PORT, quiet=True)
@@ -181,9 +196,14 @@ def main():
     while debugger.online:
         try:
             cmd = session.prompt('> ')
-            if cmd not in dbg_cmd_completer.words:
-                print(f"Invalid command: {cmd}")
+            splited = cmd.split(" ")
+            cmd_name = splited[0]
+
+            if cmd_name not in AVAILABLE_COMMANDS:
+                print(f"Invalid command: {cmd_name}")
                 continue
+
+            debugger.launch_cmd(cmd_name, splited[1:])
             
 
         except KeyboardInterrupt:

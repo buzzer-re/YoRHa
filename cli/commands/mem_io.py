@@ -33,7 +33,7 @@ class MemRead(Command):
     
     def print_response(self):
         if self.raw_data:
-            print(self.raw_data)
+            # print(self.raw_data)
             print(f"Read: {self.response.response_size} bytes")
             data_read = self.raw_data[self.response_struct.sizeof():]
             open("dump.bin", "wb").write(data_read)

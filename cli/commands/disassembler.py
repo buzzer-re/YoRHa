@@ -1,11 +1,10 @@
-from nyxstone import Nyxstone
-
+from capstone import *
 
 class Disassembler:
     def __init__(self):
-        self.nyxstone = Nyxstone("x86_64")
+        self.cs = Cs(CS_ARCH_X86, CS_MODE_64)
 
     def disas(self, data, base_address = 0):
-        return self.nyxstone.disassemble_to_instructions(data, base_address, count=10)
+        return self.cs.disasm(data, base_address)
     
     
