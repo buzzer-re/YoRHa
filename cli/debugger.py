@@ -32,11 +32,35 @@ def hex2int_from_list(l):
                 l[i] = str(int(l[i], base=16))
         except: continue
 
+
+def fix_split_strings(string_list):
+    fixed_list = []
+    combining = False
+    reconstructed_string = ""
+
+    for item in string_list:
+        if item.startswith('"') and not item.endswith('"'):
+            combining = True
+            reconstructed_string = item[1:]  # Remove the starting "
+        elif combining:
+            if item.endswith('"'):
+                reconstructed_string += " " + item[:-1]  # Add the last part and remove the ending "
+                fixed_list.append(reconstructed_string)  # Add the complete reconstructed string
+                combining = False  # Stop combining
+            else:
+                reconstructed_string += " " + item
+        else:
+            fixed_list.append(item)
+
+    return fixed_list
+
 #
 # Build argparse objects dynamically and parse the user provided arguments
 #
 def parse_args(args, expected_arguments) -> argparse.Namespace:
     hex2int_from_list(args)
+    args = fix_split_strings(args)
+
     parser = argparse.ArgumentParser(add_help=False)
     for argument in expected_arguments:
         argument_action = 'store_true' if argument.type == bool else 'store'
@@ -45,11 +69,12 @@ def parse_args(args, expected_arguments) -> argparse.Namespace:
         else:
             parser.add_argument(*argument.modifiers, action=argument_action)
     parsed = None
-    parser._print_message = lambda x,y: None
+    # parser._print_message = lambda x,y: None
     try:
         parsed = parser.parse_args(args)
-    except:
-        return None
+    except Exception as e:
+        print(e)
+        # return None
     
     #
     # Convert the types here, because "action" and "type" can't coexist on the argparse
@@ -61,9 +86,9 @@ def parse_args(args, expected_arguments) -> argparse.Namespace:
 
         if argument.type == bytearray and type(attr) == str:
             if "\\x" in attr:
-                attr = ast.literal_eval(attr)
-            
-            attr = attr.encode()
+                attr = ast.literal_eval(f'b"{attr}"')
+            else:
+                attr = attr.encode()
 
         setattr(parsed, argument.arg_name, argument.type(attr))
 
@@ -222,7 +247,6 @@ class Debugger:
         mem = mem_io.MemRead(rip - 1, 0x10, only_read = True)
         self.__send_cmd(mem, True, trap_fame=self.in_dbg_context)
         print("\n\n")
-        print(break_list.breakpoints_lookup)
         try:
             # Filter breakpoints
             if break_list and break_list.num_breakpoints > 0:
@@ -269,9 +293,11 @@ class Debugger:
         break_del_cmd = breakpoint.RemoveBreakpoint(args.address)
         self.__send_cmd(break_del_cmd, wait=False, trap_fame=self.in_dbg_context)
 
+
     def __memory_write(self, args):
         args = parse_args(args, mem_io.MemWrite.ARGUMENTS)
         if not args:
+            print("writemem: wrong args")
             return False
         
         if not args.input and not args.bytes:

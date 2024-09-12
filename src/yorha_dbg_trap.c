@@ -36,8 +36,8 @@ int yorha_trap_command_handler(trap_frame_t* ctx)
     //
     // The trap handler was called outside the dbg controller context
     //
-    if (!command)
-        command = &current_command;
+    
+    command = &current_command;
 
     int status = YORHA_SUCCESS;
     int cmd_loop = true;
@@ -67,8 +67,8 @@ int yorha_trap_command_handler(trap_frame_t* ctx)
         //
         // Make the fd non-block to not lock the system
         //
-        remote_fd_flags = kfcntl(remote_connection, F_GETFL, NULL, td);
-        kfcntl(remote_connection, F_SETFL, remote_fd_flags | O_NONBLOCK, td);
+        // remote_fd_flags = kfcntl(remote_connection, F_GETFL, NULL, td);
+        // kfcntl(remote_connection, F_SETFL, remote_fd_flags | O_NONBLOCK, td);
 
         kprintf("Processing command %d\n", command->header.command_type);
         
@@ -121,6 +121,7 @@ int yorha_trap_command_handler(trap_frame_t* ctx)
 
             if (yorha_trap_dbg_get_new_commands(command, remote_connection, td) == YORHA_FAILURE)
             {
+                memset(command, NULL, sizeof(dbg_command_header));
                 kprintf("Error reading new commands!\n");
                 //cmd_loop = false;
                 goto close;
@@ -130,6 +131,7 @@ int yorha_trap_command_handler(trap_frame_t* ctx)
 
     close:
     //    RESTART();
+        // kshutdown(remote_connection, SHUT_RDWR, td);
         kclose(remote_connection, td);
 
     } while (cmd_loop);
@@ -151,23 +153,25 @@ int yorha_trap_dbg_get_new_commands(dbg_command_t* command, int conn, struct thr
 {
     fd_set readfds;
     int status;
-    struct timeval tv;
+    // struct timeval tv;
     
     FD_ZERO(&readfds);
     FD_SET(conn, &readfds);
 
-    tv.tv_sec = 5;
-    tv.tv_usec = 0;
-
+    // tv.tv_sec = 5;
+    // tv.tv_usec = 0;
+    size_t retries = 0;
+    size_t max_retries = 20;
     kprintf("Starting trap frame command handler...\nReading data inside the gate...\n");
     
-    while (1)
+    while (retries < max_retries)
     {
         status = kselect(conn + 1, &readfds, NULL, NULL, NULL, td);
         kprintf("Called select()\n");
         
         if (status < 0)
         {
+            retries++;
             // kprintf("select() error when reading remote, aborting...\n");
             continue;
         }
@@ -201,16 +205,7 @@ int pause_kernel_trap_handler(dbg_command_t*, int, trap_frame_t* ctx)
 {
     kprintf("pause_kernel_trap_handler\n");
     pause_kernel_response_data_t response = {0};
-    uint64_t rip = ctx->rip;
     memcpy(&response.trap_frame, ctx, sizeof(trap_frame_t));
-    //
-    // TODO: Read X bytes from RIP, verify if the memory is safe to read
-    //
-
-    //
-    // TODO: Verify if RIP + PAUSE_KERNEL_CODE_DUMP_SIZE is a valid kernel executable address!
-    //
-   // memcpy(response.code, (const void*) rip - 1, PAUSE_KERNEL_CODE_DUMP_SIZE);
     
     response.header.command_type = DBG_PAUSE;
     response.header.command_status = YORHA_SUCCESS;

@@ -3,6 +3,7 @@
 .global __get_rsp
 .global __get_rip
 .global memcpy
+.global memset
 
 
 __get_rsp:
@@ -19,4 +20,12 @@ memcpy:
 	rep movsb
 	ret
 
-
+memset:
+    push rdi
+    mov     r8,     rdi 
+    mov     rax,    rsi 
+    mov     rcx,    rdx 
+    rep     stosb
+    pop rdi
+    mov rax, rdi
+    ret

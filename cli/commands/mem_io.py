@@ -72,17 +72,6 @@ class MemWrite(Command):
         Command.__init__(self, DebuggerCommandsCode.DBG_MEM_WRITE)
         self.command_code = DebuggerCommandsCode.DBG_MEM_WRITE
         self.response_struct = dbg_response_header
-        request = dbg_request_header.build({
-            "cmd_type" : DebuggerCommandsCode.DBG_MEM_WRITE,
-            "argument_size": 16
-        })
-        
-        self.command = memory_write_request_t.build({
-            "header" : dbg_request_header.parse(request),
-            "target_address": addr,
-            "write_size": len(data)
-        })
-
         target_data = b''
 
         if input_file:
@@ -93,5 +82,16 @@ class MemWrite(Command):
         else:
             # Fine, this will not work, ok ?
             pass
-
+        
+        request = dbg_request_header.build({
+            "cmd_type" : DebuggerCommandsCode.DBG_MEM_WRITE,
+            "argument_size": 16
+        })
+        
+        self.command = memory_write_request_t.build({
+            "header" : dbg_request_header.parse(request),
+            "target_address": addr,
+            "write_size": len(target_data)
+        })
+        
         self.command = self.command + target_data
