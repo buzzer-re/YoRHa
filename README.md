@@ -178,7 +178,7 @@ Any unused registers will remain unchanged.
 
 # Future features
 
-he debugger is missing a few commands, such as `single-step`, but these will be implemented in the near future. I developed all the existing commands based on my needs during reverse engineering activities and will continue to add features as required.
+The debugger is missing a few commands, such as `single-step`, but these will be implemented in the near future. I developed all the existing commands based on my needs during reverse engineering activities and will continue to add features as required.
 
 
 # Conclusion
