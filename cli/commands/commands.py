@@ -42,10 +42,11 @@ trap_frame_t = construct.Struct(
 
 
 class CommandArgument:
-    def __init__(self, arg_name, tokens, description):
+    def __init__(self, arg_name, modifiers, description, arg_type):
         self.arg_name = arg_name
-        self.tokens = tokens
+        self.modifiers = modifiers
         self.description = description
+        self.type = arg_type
 
 class DebuggerCommandsCode:
     PAUSE_DEBUGGER      = 0

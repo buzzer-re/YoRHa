@@ -11,8 +11,47 @@ class Registers:
 
 
 AVAILABLE_COMMANDS = {
-    "disas" : disas.Disassemble
+    "disas"     : disas.Disassemble,
+    "memread"   : mem_io.MemRead 
 }
+
+def hex2int_from_list(l):
+    for i in range(len(l)):
+        try:
+            if "0x" in l[i]:
+                l[i] = str(int(l[i], base=16))
+        except: continue
+
+#
+# Build argparse objects dynamically and parse the user provided arguments
+#
+def parse_args(args, expected_arguments) -> argparse.Namespace:
+    hex2int_from_list(args)
+    parser = argparse.ArgumentParser(add_help=False)
+    for argument in expected_arguments:
+        argument_action = 'store_true' if argument.type == bool else 'store'
+        if not argument.modifiers:
+            parser.add_argument(argument.arg_name, action=argument_action)
+        else:
+            parser.add_argument(*argument.modifiers, action=argument_action)
+    parsed = None
+    try:
+        parsed = parser.parse_args(args)
+    except:
+        return None
+    
+    #
+    # Convert the types here, because "action" and "type" can't coexist on the argparse
+    # Since we want to build a generic argparser builder, we must set the types later
+    #
+    for argument in expected_arguments:
+        attr = getattr(parsed, argument.arg_name)
+        if not attr: continue
+
+        setattr(parsed, argument.arg_name, argument.type(attr))
+
+    return parsed
+
 
 class Debugger:
     def __init__(self, host, port, dbg_port, quiet = False):
@@ -32,7 +71,8 @@ class Debugger:
         self.regs = Registers()
         self.disas = Disassembler()
         self.dispatcher = {
-            "disas" : self.__disassemble
+            "disas"     : self.__disassemble,
+            "memread"   : self.__memory_read, 
         }
 
     def connect(self, port) -> int:
@@ -102,26 +142,9 @@ class Debugger:
             self.dispatcher[cmd](cmd, args)
         
     
-
     def __disassemble(self, cmd: str, args: list) -> bool:
-        for i in range(len(args)):
-            try:
-                if "0x" in args[i]:
-                    args[i] = str(int(args[i], base=16))
-            except: continue
-        
-        parser = argparse.ArgumentParser(add_help=False)
-        parser.add_argument("address", type=int)
-        parser.add_argument("-c", "--count", type=int)
-        parser._print_message = lambda x, y: None
-        parsed = None
-        try:
-            parsed = parser.parse_args(args)
-        except:
-            print(f"Wrong usage of command: {cmd}")
-            return False
-        
-        disas_cmd = disas.Disassemble(parsed.address, parsed.count)
+        args = parse_args(args, disas.Disassemble.ARGUMENTS)        
+        disas_cmd = disas.Disassemble(args.address, args.count)
         self.__send_cmd(disas_cmd, wait=True, trap_fame=self.in_dbg_context)
         
 
@@ -131,8 +154,15 @@ class Debugger:
         self.in_dbg_context = False
 
 
-    def memory_read(self, addr, size):
-        memory_read_req = mem_io.MemRead(addr, size)
+    def __memory_read(self, cmd, args) -> False:
+        args = parse_args(args, mem_io.MemRead.ARGUMENTS)
+        if not args:
+            return False
+        
+        if not args.count:
+            args.count = 16
+
+        memory_read_req = mem_io.MemRead(args.address, args.count, args.output)
         self.__send_cmd(memory_read_req, True, trap_fame=self.in_dbg_context)
 
 

@@ -6,7 +6,8 @@ MAX_X64_INST_SIZE = 16
 
 class Disassemble(MemRead):
     ARGUMENTS = [
-        CommandArgument("count", ["-c", "--count"], "Number of instructions to disassemble"),
+        CommandArgument("count", ["--count", "-c"], "Number of instructions to disassemble", arg_type=int),
+        CommandArgument("address", [], "Address to be read", arg_type=int)
     ]
 
     def __init__(self, address, count):

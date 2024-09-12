@@ -105,10 +105,9 @@ class DbgCommandCompleter(Completer):
         if len(command_tokens) > 1:
             command = command_tokens[0]
             if command in AVAILABLE_COMMANDS:
-                for command, obj in AVAILABLE_COMMANDS.items():
-                    for argument in obj.ARGUMENTS:
-                        for token in argument.tokens:
-                            yield Completion(token, start_position=0)
+                for argument in AVAILABLE_COMMANDS[command].ARGUMENTS:
+                    for token in argument.modifiers:
+                        yield Completion(token, start_position=0)
         else:    
             for command in AVAILABLE_COMMANDS.keys():
                 yield Completion(command, start_position=0)
@@ -202,8 +201,10 @@ def main():
             if cmd_name not in AVAILABLE_COMMANDS:
                 print(f"Invalid command: {cmd_name}")
                 continue
-
-            debugger.launch_cmd(cmd_name, splited[1:])
+            
+            # remove white spaces
+            args = list(filter(lambda x: x != '',splited[1:]))
+            debugger.launch_cmd(cmd_name, args)
             
 
         except KeyboardInterrupt:

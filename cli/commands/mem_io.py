@@ -1,5 +1,5 @@
 from .commands import *
-
+from .utils import hexdump
 
 memory_read_request_t = construct.Struct(
     "header"     / dbg_request_header,
@@ -14,7 +14,14 @@ memory_write_request_t = construct.Struct(
 )
 
 class MemRead(Command):
-    def __init__(self, addr, size):
+    ARGUMENTS = [
+        CommandArgument("count", ["-c", "--count"], "Number of bytes to read", arg_type=int),
+        # CommandArgument("hex",   ["--hex"], "Display as a HexDump", arg_type=bool),
+        CommandArgument("output",  ["-o", "--output"], "Save data into a file", arg_type=str),
+        CommandArgument("address", [], "Address to read", arg_type=int)
+    ]
+
+    def __init__(self, addr, size = 16, output_file = None):
         Command.__init__(self, DebuggerCommandsCode.DBG_MEM_READ)
         self.command_code = DebuggerCommandsCode.DBG_MEM_READ
         self.response_struct = dbg_response_header
@@ -29,14 +36,24 @@ class MemRead(Command):
             "read_size" : size
         })
 
+        self.print_hex = output_file == None
+        self.output_file = output_file
         self.max_size = self.response_struct.sizeof() + size
     
+    #
+    # Print response overload from the class Command
+    #
     def print_response(self):
         if self.raw_data:
-            # print(self.raw_data)
-            print(f"Read: {self.response.response_size} bytes")
             data_read = self.raw_data[self.response_struct.sizeof():]
-            open("dump.bin", "wb").write(data_read)
+            
+            if self.print_hex:
+                print(hexdump.hexdump(data_read))
+            else:
+                with open(self.output_file, "wb") as out_fd:
+                    out_fd.write(data_read)
+                    print(f"[+] Saved {len(data_read)} bytes at {self.output_file}! [+]")
+
 
 
 class MemWrite(Command):
