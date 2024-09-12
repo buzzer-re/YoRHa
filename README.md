@@ -79,7 +79,12 @@ At this moment, YoRHa can't be loaded by usermode binloaders, but future version
 
 I’ve developed a simple CLI tool to interact with the debugger. While this tool is not intended to be the final version—since I plan to build a GUI application for it—it is still quite useful and straightforward to use. The source code is available in the `cli/` folder, and you can easily install it using `pip`.
 
-> pip install yorha
+Install `pipenv` and sync the packages (only the first time)
+> cd cli && pipenv shell && pipenv sync
+
+Execute the main script:
+
+> python3 yorha.py
 
 
 ## Connecting
