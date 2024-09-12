@@ -8,6 +8,7 @@ set_thread_context_t = construct.Struct(
 )
 
 class DebuggerContext(Command):
+    ARGUMENTS = []
     def __init__(self):
         self.disas = Disassembler()
 

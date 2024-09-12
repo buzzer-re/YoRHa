@@ -4,6 +4,7 @@ from commands.disassembler import Disassembler
 import socket
 import argparse
 import os
+import ast
 
 class Registers:
     rax = 0
@@ -13,9 +14,13 @@ class Registers:
 AVAILABLE_COMMANDS = {
     "disas"     : disas.Disassemble,
     "memread"   : mem_io.MemRead,
+    "memwrite"  : mem_io.MemWrite,
     "pause"     : pause.PauseDebugger,
     "continue"  : continue_exec.Continue,
-    "context"   : context.DebuggerContext
+    "context"   : context.DebuggerContext,
+    "break"     : breakpoint.BreakpointCommand,
+    "breakdel"  : breakpoint.RemoveBreakpoint,
+    "unload"    : None
 }
 
 def hex2int_from_list(l):
@@ -38,6 +43,7 @@ def parse_args(args, expected_arguments) -> argparse.Namespace:
         else:
             parser.add_argument(*argument.modifiers, action=argument_action)
     parsed = None
+    parser._print_message = lambda x,y: None
     try:
         parsed = parser.parse_args(args)
     except:
@@ -50,6 +56,12 @@ def parse_args(args, expected_arguments) -> argparse.Namespace:
     for argument in expected_arguments:
         attr = getattr(parsed, argument.arg_name)
         if not attr: continue
+
+        if argument.type == bytearray and type(attr) == str:
+            if "\\x" in attr:
+                attr = ast.literal_eval(attr)
+            
+            attr = attr.encode()
 
         setattr(parsed, argument.arg_name, argument.type(attr))
 
@@ -76,9 +88,13 @@ class Debugger:
         self.dispatcher = {
             "disas"     : self.__disassemble,
             "memread"   : self.__memory_read,
+            "memwrite"  : self.__memory_write,
             "pause"     : self.__pause_debugger,
             "continue"  : self.__continue,
-            "context"   : self.print_context
+            "context"   : self.print_context,
+            "break"     : self.__breakpoint,
+            "breakdel"  : self.__remove_breakpoint,
+            "unload"    : self.disconnect
         }
 
     def connect(self, port) -> int:
@@ -151,7 +167,11 @@ class Debugger:
 
     def launch_cmd(self, cmd, args):
         if cmd in self.dispatcher:
-            self.dispatcher[cmd](args)
+            if cmd != "unload":            
+                self.dispatcher[cmd](args)
+            else:
+                self.disconnect(unload_dbg=True)
+                
         
     
     def __disassemble(self, args: list) -> bool:
@@ -186,11 +206,10 @@ class Debugger:
 
 
     def print_context(self, args = []) -> bool:
-        print("Registers: ")
         ctx_cmd = context.DebuggerContext()
-        self.__send_cmd(ctx_cmd, True, True)
-        
-        if not ctx_cmd:
+        print("Registers: ")
+
+        if not self.__send_cmd(ctx_cmd, True, True):
             print("System is not in a paused state!")
             return
         
@@ -199,13 +218,18 @@ class Debugger:
         mem = mem_io.MemRead(rip - 1, 0x10, only_read = True)
         self.__send_cmd(mem, True, trap_fame=self.in_dbg_context)
         print("\n\n")
+        print(break_list.breakpoints_lookup)
         try:
             # Filter breakpoints
             if break_list and break_list.num_breakpoints > 0:
+                raw_code_bytes = list(mem.data_read)
+
                 for i, code in enumerate(mem.data_read):
                     addr = rip - 1 + i # Minus 1 because RIP points to the next instruction
                     if addr in break_list.breakpoints_lookup:
-                        mem.data_read[i] = break_list.breakpoints_lookup[addr].old_opcode
+                        raw_code_bytes[i] = break_list.breakpoints_lookup[addr].old_opcode
+
+                mem.data_read = bytearray(raw_code_bytes)
 
             insts = self.disas.disas(mem.data_read, ctx_cmd.response.trap_frame.rip - 1)
             print("Disassembly: ")
@@ -213,7 +237,7 @@ class Debugger:
                 print(f"{hex(inst.address)}:\t{inst.mnemonic}\t{inst.op_str}", end=" ")
                 if ctx_cmd.response.trap_frame.rip == inst.address:
                     print("; <=== RIP", end="")
-
+                
                 if break_list and inst.address in break_list.breakpoints_lookup:
                     print("; Software Breakpoint", end="")
 
@@ -223,24 +247,42 @@ class Debugger:
             print(bytearray(ctx_cmd.response.code))
             print(e)
 
-    def place_breakpoint(self, addr):
-        addr = int(addr, base=16)
-        dbg_cmd = breakpoint.BreakpointCommand(addr)
+    def __breakpoint(self, args):
+        args = parse_args(args, breakpoint.BreakpointCommand.ARGUMENTS)
+        
+        if not args:
+            return False
+        
+        dbg_cmd = breakpoint.BreakpointCommand(args.address)
         self.__send_cmd(dbg_cmd, wait=False, trap_fame=self.in_dbg_context)
     
+    def __remove_breakpoint(self, args):
+        args = parse_args(args, breakpoint.RemoveBreakpoint.ARGUMENTS)
+        
+        if not args:
+            return False
+        
+        break_del_cmd = breakpoint.RemoveBreakpoint(args.address)
+        self.__send_cmd(break_del_cmd, wait=False, trap_fame=self.in_dbg_context)
 
-    def write_memory(self, addr, data):
-        dbg_cmd = mem_io.MemWrite(addr, data)
+    def __memory_write(self, args):
+        args = parse_args(args, mem_io.MemWrite.ARGUMENTS)
+        if not args:
+            return False
+        
+        if not args.input and not args.bytes:
+            print("You must specify a file with --input/-i or written something with the --bytes/-b argument! ")
+            return False
+        
+        dbg_cmd = mem_io.MemWrite(args.address, args.bytes, args.input)
         self.__send_cmd(dbg_cmd, wait=False, trap_fame=self.in_dbg_context)
+
 
     def set_thread_ctx(self):
         dbg_cmd = context.SetThreadContext()
         self.__send_cmd(dbg_cmd, wait=False, trap_fame=True)
 
-    def remove_breakpoint(self, addr):
-        addr = int(addr, base=16)
-        break_del_cmd = breakpoint.RemoveBreakpoint(addr)
-        self.__send_cmd(break_del_cmd, wait=False, trap_fame=self.in_dbg_context)
+
 
     def disas(self, addr):
         memory_read_req = mem_io.MemRead(addr, 100)

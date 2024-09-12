@@ -19,6 +19,10 @@ breakpoint_entry_t = construct.Struct(
 )
 
 class BreakpointCommand(Command):
+    ARGUMENTS = [
+        CommandArgument("address", [], "Address to place breakpoint", arg_type=int)
+    ]
+
     def __init__(self, address):
         Command.__init__(self, DebuggerCommandsCode.PLACE_BREAKPOINT)
         self.command_code = DebuggerCommandsCode.PLACE_BREAKPOINT
@@ -40,9 +44,9 @@ class BreakpointCommand(Command):
 
 
 class ListBreakpoints(Command):
-    def __init__(self):
+    def __init__(self, quiet = True):
         Command.__init__(self, DebuggerCommandsCode.BREAKPOINT_LIST)
-        self.command_code = DebuggerCommandsCode.BREAKPOINT_LIST;
+        self.command_code = DebuggerCommandsCode.BREAKPOINT_LIST
         self.response_struct = breakpoint_list_response
         self.command = dbg_request_header.build({
             "cmd_type" : DebuggerCommandsCode.BREAKPOINT_LIST,
@@ -50,6 +54,7 @@ class ListBreakpoints(Command):
         })
         self.num_breakpoints = 0
         self.breakpoints_lookup = {}
+        self.quiet = quiet
     
     def parse_response(self, data):
         #
@@ -70,13 +75,17 @@ class ListBreakpoints(Command):
             breakpoint_list_raw = breakpoint_list_raw[breakpoint_entry_t.sizeof():]
 
     def print_response(self):
-        if self.num_breakpoints != 0:
+        if not self.quiet and self.num_breakpoints != 0:
             for addr, info in self.breakpoints_lookup.items():
                 print(f"{hex(addr)}:")
                 print(f"\tOriginal opcode:{info.old_opcode}\n\tEnabled: {info.enabled == 1}")
 
 
 class RemoveBreakpoint(Command):
+        ARGUMENTS = [
+            CommandArgument("address", [], "Address to place breakpoint", arg_type=int)
+        ]
+
         def __init__(self, address):
             Command.__init__(self, DebuggerCommandsCode.BREAKPOINT_REMOVE)
             Command.__init__(self, DebuggerCommandsCode.BREAKPOINT_REMOVE)

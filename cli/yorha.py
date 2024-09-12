@@ -100,7 +100,7 @@ class DbgCommandCompleter(Completer):
         command_tokens = document.text.split(" ")
         if len(command_tokens) > 1:
             command = command_tokens[0]
-            if command in AVAILABLE_COMMANDS:
+            if command in AVAILABLE_COMMANDS and AVAILABLE_COMMANDS[command] != None:
                 for argument in AVAILABLE_COMMANDS[command].ARGUMENTS:
                     for token in argument.modifiers:
                         yield Completion(token, start_position=0)
@@ -148,7 +148,7 @@ def parse_config() -> ConfigParser:
 
 def print_banner():
     if DEV_BUILD: return
-    
+
     msg = "- Glory... to mankind! -"
     print(f"Welcome to YoRHa DBG CLI Version {VERSION}!\n\t", end="")
     

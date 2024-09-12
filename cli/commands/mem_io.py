@@ -1,5 +1,6 @@
 from .commands import *
 from .utils import hexdump
+import ast
 
 memory_read_request_t = construct.Struct(
     "header"     / dbg_request_header,
@@ -61,7 +62,13 @@ class MemRead(Command):
 
 
 class MemWrite(Command):
-    def __init__(self, addr, data):
+    ARGUMENTS = [
+        CommandArgument("address", [], "Address to written into it", arg_type=int),
+        CommandArgument("input", ["-i", "--input"], "Input file ", arg_type=str),
+        CommandArgument("bytes", ["-b", "--bytes"], "Raw bytes to written, direct from terminal", arg_type=bytearray),
+    ]
+
+    def __init__(self, addr, data = None, input_file = ''):
         Command.__init__(self, DebuggerCommandsCode.DBG_MEM_WRITE)
         self.command_code = DebuggerCommandsCode.DBG_MEM_WRITE
         self.response_struct = dbg_response_header
@@ -69,11 +76,22 @@ class MemWrite(Command):
             "cmd_type" : DebuggerCommandsCode.DBG_MEM_WRITE,
             "argument_size": 16
         })
-
+        
         self.command = memory_write_request_t.build({
             "header" : dbg_request_header.parse(request),
             "target_address": addr,
             "write_size": len(data)
         })
 
-        self.command = self.command + data
+        target_data = b''
+
+        if input_file:
+            with open(input_file, "rb") as input_fd:
+                target_data = input_fd.read()
+        elif data != None:
+            target_data = data
+        else:
+            # Fine, this will not work, ok ?
+            pass
+
+        self.command = self.command + target_data
