@@ -20,7 +20,8 @@ AVAILABLE_COMMANDS = {
     "context"   : context.DebuggerContext,
     "break"     : breakpoint.BreakpointCommand,
     "breakdel"  : breakpoint.RemoveBreakpoint,
-    "unload"    : None
+    "unload"    : None,
+    "setr"      : context.SetThreadContext
 }
 
 def hex2int_from_list(l):
@@ -94,7 +95,8 @@ class Debugger:
             "context"   : self.print_context,
             "break"     : self.__breakpoint,
             "breakdel"  : self.__remove_breakpoint,
-            "unload"    : self.disconnect
+            "unload"    : self.disconnect,
+            "setr"      : self.__set_thread_context
         }
 
     def connect(self, port) -> int:
@@ -278,15 +280,28 @@ class Debugger:
         self.__send_cmd(dbg_cmd, wait=False, trap_fame=self.in_dbg_context)
 
 
-    def set_thread_ctx(self):
-        dbg_cmd = context.SetThreadContext()
+    def __set_thread_context(self, args):
+        args = parse_args(args, context.SetThreadContext.ARGUMENTS)
+        if not args:
+            return False
+        
+        ctx_cmd = context.DebuggerContext(quiet=True)
+
+        if not self.__send_cmd(ctx_cmd, True, True):
+            print("System is not in a paused state!")
+            return
+
+        # Copy new register values to the trap_frame struct
+        for reg in ctx_cmd.response.trap_frame:
+            try:
+                new_reg_value = getattr(args, reg)
+                if new_reg_value !=  None:
+                    ctx_cmd.response.trap_frame[reg] = new_reg_value
+
+            except: continue
+
+        dbg_cmd = context.SetThreadContext(ctx_cmd.response.trap_frame)
         self.__send_cmd(dbg_cmd, wait=False, trap_fame=True)
-
-
-
-    def disas(self, addr):
-        memory_read_req = mem_io.MemRead(addr, 100)
-        self.__send_cmd(memory_read_req, wait=True, trap_fame=True)
     
 
     def load_payload(self, file_path):
