@@ -12,7 +12,10 @@ class Registers:
 
 AVAILABLE_COMMANDS = {
     "disas"     : disas.Disassemble,
-    "memread"   : mem_io.MemRead 
+    "memread"   : mem_io.MemRead,
+    "pause"     : pause.PauseDebugger,
+    "continue"  : continue_exec.Continue,
+    "context"   : context.DebuggerContext
 }
 
 def hex2int_from_list(l):
@@ -66,13 +69,16 @@ class Debugger:
         if not self.dbg_controller_socket:
             self.dbg_trap_socket = self.connect(self.dbg_trap_port)
 
-        self.online = self.dbg_controller_socket != False or self.dbg_trap_socket != False
+        self.online = self.dbg_controller_socket != None or self.dbg_trap_socket != None
         self.in_dbg_context = self.dbg_trap_socket != None
         self.regs = Registers()
         self.disas = Disassembler()
         self.dispatcher = {
             "disas"     : self.__disassemble,
-            "memread"   : self.__memory_read, 
+            "memread"   : self.__memory_read,
+            "pause"     : self.__pause_debugger,
+            "continue"  : self.__continue,
+            "context"   : self.print_context
         }
 
     def connect(self, port) -> int:
@@ -85,7 +91,7 @@ class Debugger:
                 print("Exception connecting to the PS4  ")
                 print(e)
 
-            return False
+            return None
         
         return sock
 
@@ -109,14 +115,15 @@ class Debugger:
         return False
 
 
-    def __send_cmd(self, command, wait=True, trap_fame=False) -> bool:
+    def __send_cmd(self, command, wait=True, trap_fame=False, retry=True) -> bool:
         sock = self.dbg_controller_socket
         # Create the trap frame connection
+        success = False
         if trap_fame:
-            if not self.in_dbg_context:
+            if self.dbg_trap_socket == None or retry:
                 self.dbg_trap_socket = self.connect(self.dbg_trap_port)
                 if not self.dbg_trap_socket:
-                    print(f"Unable to connect to the PS4, is the debugger running ?")
+                    print(f"PS4 not trapped into the debugger!")
                     return None
                 self.in_dbg_context = True
 
@@ -125,12 +132,17 @@ class Debugger:
         try:
             sock.send(command.serialize())
 
-            if wait:    
+            if wait:
                 response = sock.recv(command.max_size)
+                success = True
                 command.parse_response(response)
                 command.print_response()
             return True
         except Exception as e:
+            if retry and not success:
+                if self.__send_cmd(command, wait, trap_fame=trap_fame, retry=False):
+                    return True
+                
             print("Unable to send command!")
             print(e)
 
@@ -139,22 +151,22 @@ class Debugger:
 
     def launch_cmd(self, cmd, args):
         if cmd in self.dispatcher:
-            self.dispatcher[cmd](cmd, args)
+            self.dispatcher[cmd](args)
         
     
-    def __disassemble(self, cmd: str, args: list) -> bool:
+    def __disassemble(self, args: list) -> bool:
         args = parse_args(args, disas.Disassemble.ARGUMENTS)        
         disas_cmd = disas.Disassemble(args.address, args.count)
         self.__send_cmd(disas_cmd, wait=True, trap_fame=self.in_dbg_context)
         
 
-    def continue_execution(self):
+    def __continue(self, args):
         continue_cmd = continue_exec.Continue()
-        self.__send_cmd(continue_cmd, False, True)
-        self.in_dbg_context = False
+        if self.__send_cmd(continue_cmd, False, True):
+            self.in_dbg_context = False
 
 
-    def __memory_read(self, cmd, args) -> False:
+    def __memory_read(self, args) -> False:
         args = parse_args(args, mem_io.MemRead.ARGUMENTS)
         if not args:
             return False
@@ -166,48 +178,41 @@ class Debugger:
         self.__send_cmd(memory_read_req, True, trap_fame=self.in_dbg_context)
 
 
-    def pause_debugger(self) -> bool:
+    def __pause_debugger(self, args) -> bool:
         pause_cmd = pause.PauseDebugger()
-        self.__send_cmd(pause_cmd, False, False)
+        if self.__send_cmd(pause_cmd, False, False):
+            self.in_dbg_context = True
+            self.print_context()
 
 
-    def print_context(self) -> bool:
+    def print_context(self, args = []) -> bool:
+        print("Registers: ")
         ctx_cmd = context.DebuggerContext()
         self.__send_cmd(ctx_cmd, True, True)
-        break_list = self.list_breakpoints()
+        
         if not ctx_cmd:
             print("System is not in a paused state!")
             return
         
-        print(f"RAX: {hex(ctx_cmd.response.trap_frame.rax)}")
-        print(f"RDX: {hex(ctx_cmd.response.trap_frame.rdx)}")
-        print(f"RCX: {hex(ctx_cmd.response.trap_frame.rcx)}")
-        print(f"RBX: {hex(ctx_cmd.response.trap_frame.rbx)}")
-        print(f"RDI: {hex(ctx_cmd.response.trap_frame.rdi)}")
-        print(f"RSI: {hex(ctx_cmd.response.trap_frame.rsi)}")
-        print(f"RBP: {hex(ctx_cmd.response.trap_frame.rbp)}")
-        print(f"RSP: {hex(ctx_cmd.response.trap_frame.rsp)}")
-        print(f"R8: {hex(ctx_cmd.response.trap_frame.r8)}")
-        print(f"R9: {hex(ctx_cmd.response.trap_frame.r9)}")
-        print(f"R10: {hex(ctx_cmd.response.trap_frame.r11)}")
-        print(f"R12: {hex(ctx_cmd.response.trap_frame.r12)}")
-        print(f"R13: {hex(ctx_cmd.response.trap_frame.r13)}")
-        print(f"R14: {hex(ctx_cmd.response.trap_frame.r14)}")
-        print(f"R15: {hex(ctx_cmd.response.trap_frame.r15)}")
-        print(f"RIP: {hex(ctx_cmd.response.trap_frame.rip)}")
-                
+        break_list = self.list_breakpoints()        
+        rip = ctx_cmd.response.trap_frame.rip
+        mem = mem_io.MemRead(rip - 1, 0x10, only_read = True)
+        self.__send_cmd(mem, True, trap_fame=self.in_dbg_context)
+        print("\n\n")
         try:
             # Filter breakpoints
             if break_list and break_list.num_breakpoints > 0:
-                for i, code in enumerate(ctx_cmd.response.code):
-                    addr = ctx_cmd.response.trap_frame.rip + i - 1 # Minus 1 because RIP points to the next instruction
+                for i, code in enumerate(mem.data_read):
+                    addr = rip - 1 + i # Minus 1 because RIP points to the next instruction
                     if addr in break_list.breakpoints_lookup:
-                        ctx_cmd.response.code[i] = break_list.breakpoints_lookup[addr].old_opcode
+                        mem.data_read[i] = break_list.breakpoints_lookup[addr].old_opcode
 
-            insts = self.disas.disas(ctx_cmd.response.code, ctx_cmd.response.trap_frame.rip - 1)
-
+            insts = self.disas.disas(mem.data_read, ctx_cmd.response.trap_frame.rip - 1)
+            print("Disassembly: ")
             for inst in insts:
-                print(f"{hex(inst.address)}\t {' '.join([hex(x)[2:] for x in inst.bytes])}\t {inst.assembly}",  end="")
+                print(f"{hex(inst.address)}:\t{inst.mnemonic}\t{inst.op_str}", end=" ")
+                if ctx_cmd.response.trap_frame.rip == inst.address:
+                    print("; <=== RIP", end="")
 
                 if break_list and inst.address in break_list.breakpoints_lookup:
                     print("; Software Breakpoint", end="")

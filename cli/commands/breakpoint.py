@@ -70,7 +70,6 @@ class ListBreakpoints(Command):
             breakpoint_list_raw = breakpoint_list_raw[breakpoint_entry_t.sizeof():]
 
     def print_response(self):
-        print(self.num_breakpoints)
         if self.num_breakpoints != 0:
             for addr, info in self.breakpoints_lookup.items():
                 print(f"{hex(addr)}:")

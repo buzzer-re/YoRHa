@@ -4,7 +4,6 @@ import binascii
 pause_debugger_response = construct.Struct(
     "header"     / dbg_response_header,
     "trap_frame" / trap_frame_t,
-    "code"       / construct.Array(0x100, construct.Byte) # Breakpoint context
 )
 
 class PauseDebugger(Command):

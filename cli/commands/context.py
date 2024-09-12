@@ -20,7 +20,29 @@ class DebuggerContext(Command):
         })
 
     def print_response(self):
-        pass
+        print(f"RAX: 0x{self.response.trap_frame.rax:016x}", end="\t\t")
+        print(f"RDX: 0x{self.response.trap_frame.rdx:016x}")
+        
+        print(f"RCX: 0x{self.response.trap_frame.rcx:016x}", end="\t\t")
+        print(f"RBX: 0x{self.response.trap_frame.rbx:016x}")
+       
+        print(f"RDI: 0x{self.response.trap_frame.rdi:016x}", end="\t\t")
+        print(f"RSI: 0x{self.response.trap_frame.rsi:016x}")
+       
+        print(f"RBP: 0x{self.response.trap_frame.rbp:016x}", end="\t\t")
+        print(f"RIP: 0x{self.response.trap_frame.rip:016x}")
+
+        print(f"RSP: 0x{self.response.trap_frame.rsp:016x}", end="\t\t")
+        print(f"R8:  0x{self.response.trap_frame.r8:016x}")
+
+        print(f"R9:  0x{self.response.trap_frame.r9:016x}", end="\t\t")
+        print(f"R10: 0x{self.response.trap_frame.r10:016x}")
+
+        print(f"R12: 0x{self.response.trap_frame.r12:016x}", end="\t\t")
+        print(f"R13: 0x{self.response.trap_frame.r13:016x}")
+
+        print(f"R14: 0x{self.response.trap_frame.r14:016x}", end="\t\t")
+        print(f"R15: 0x{self.response.trap_frame.r15:016x}")
 
 
 class SetThreadContext(Command):

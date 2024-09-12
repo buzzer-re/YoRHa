@@ -23,6 +23,7 @@ HISTFILE = f"{homepath}/.yorhadbg_history"
 CONFIG = f"{homepath}/.yorhadbg.ini"
 IP_REGEX = r"^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$"
 VERSION = "0.1"
+DEV_BUILD = True
 
 class CommandsCode:
     PAUSE_DBG = 0
@@ -146,6 +147,8 @@ def parse_config() -> ConfigParser:
 
 
 def print_banner():
+    if DEV_BUILD: return
+    
     msg = "- Glory... to mankind! -"
     print(f"Welcome to YoRHa DBG CLI Version {VERSION}!\n\t", end="")
     
@@ -159,7 +162,7 @@ def print_banner():
 
 
 def main():
-    # print_banner()
+    print_banner()
     if not os.path.exists(HISTFILE):
         open(HISTFILE, "w").close()
     
@@ -185,7 +188,7 @@ def main():
     if debugger.online:
         print("Connected! [+]")
     else:
-        print("Unable to connect, make sure that the PS4 is running the YorhaDBG kpayload [-]")
+        print("Unable to connect, make sure that the PS4 is online and running the YorhaDBG kpayload [-]")
         exit(1)
     
     while debugger.online:
