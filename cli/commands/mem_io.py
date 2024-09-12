@@ -27,7 +27,7 @@ class MemRead(Command):
         self.response_struct = dbg_response_header
         request  = dbg_request_header.build({
                 "cmd_type"  : DebuggerCommandsCode.DBG_MEM_READ,
-                "argument_size" : 16
+                "argument_size" : memory_read_request_t.sizeof() - dbg_request_header.sizeof()
         })
         
         self.command = memory_read_request_t.build({
