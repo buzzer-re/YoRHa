@@ -77,7 +77,7 @@ At this moment, YoRHa can't be loaded by usermode binloaders, but future version
 
 # Using the CLI
 
-I’ve developed a simple CLI tool to interact with the debugger. While this tool is not intended to be the final version—since I plan to build a GUI application for it—it is still quite useful and straightforward to use. The source code is available in the `cli/` folder, and you can easily install it using `pip`.
+I’ve developed a simple CLI tool to interact with the debugger. While this tool is not intended to be the final version—since I plan to build a GUI application for it—it is still quite useful and straightforward to use. The source code is available in the `cli/` folder, and you can easily use it with `pipenv`.
 
 Install `pipenv` and sync the packages (only the first time)
 > cd cli && pipenv shell && pipenv sync
