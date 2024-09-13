@@ -13,7 +13,8 @@ enum dbg_commands_code  {
     DBG_LIST_BREAKPOINT,
     DBG_REMOVE_BREAKPOINT,
     DBG_MEM_WRITE,
-    DBG_SET_THREAD_CONTEXT
+    DBG_SET_THREAD_CONTEXT,
+    DBG_SINGLE_STEP
 };
 
 enum DbgStatus
@@ -62,6 +63,7 @@ typedef int(*command_trap_handler)(dbg_command_t*, int, trap_frame_t*);
 #include "dbg_commands/mem_rw.h"
 #include "dbg_commands/load_kpayload.h"
 #include "dbg_commands/set_context.h"
+#include "dbg_commands/single_step.h"
 
 
 static void* command_executor_handlers[] = 
@@ -75,7 +77,8 @@ static void* command_executor_handlers[] =
     list_breakpoint_executor,
     remove_breakpoint_executor,
     memory_write_executor,
-    NULL
+    NULL,
+    NULL,
 };
 
 static void* command_trap_handlers[] = 
@@ -89,7 +92,8 @@ static void* command_trap_handlers[] =
     list_breakpoint_trap_handler,
     remove_breakpoint_trap_handler,
     memory_write_trap_handler,
-    set_thread_context_trap_handler
+    set_thread_context_trap_handler,
+    single_step_trap_handler,
 };
 
 

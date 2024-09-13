@@ -23,7 +23,7 @@ HISTFILE = f"{homepath}/.yorhadbg_history"
 CONFIG = f"{homepath}/.yorhadbg.ini"
 IP_REGEX = r"^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$"
 VERSION = "0.1"
-DEV_BUILD = False
+DEV_BUILD = True
 
 
 class DbgCommandCompleter(Completer):

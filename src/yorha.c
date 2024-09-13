@@ -1,6 +1,5 @@
 #include "../include/yorha.h"
 
-uint64_t old_int3_gate_addr;
 
 //
 // Init the YorHa debugger, get the IDTR address, overwrite the Gate descriptors related to debugging
@@ -16,7 +15,8 @@ int yorha_dbg_start(void*, void*)
     //
     // Apply custom IDT handlers
     //
-    overwrite_idt_gate(3, (uint64_t) &int_breakpoint_handler);
+    uint64_t old_int3_gate_addr = overwrite_idt_gate(3, (uint64_t) &debug_int_handler);
+    uint64_t old_int1_gate_addr = overwrite_idt_gate(1, (uint64_t) &debug_int_handler);
 
     //
     // Start the debug loop, in theory we should "never" exit this loop, 
@@ -31,12 +31,14 @@ int yorha_dbg_start(void*, void*)
 
     kprintf("YoRHa dbg exiting...");
 
-    overwrite_idt_gate(3, (uint64_t) old_int3_gate_addr);
+    overwrite_idt_gate(3, old_int3_gate_addr);
+    overwrite_idt_gate(1, old_int1_gate_addr);
+
     return status;
 }
 
 
-void overwrite_idt_gate(int interruption_number, uint64_t gate_addr)
+uint64_t overwrite_idt_gate(int interruption_number, uint64_t gate_addr)
 {
     LOG("Patching gate %d with 0x%llx\n", interruption_number, gate_addr);
     
@@ -46,12 +48,12 @@ void overwrite_idt_gate(int interruption_number, uint64_t gate_addr)
     idt_64* idt_array;
     idt_64* idt_entry;
     __sidt(&idtr);
-
+    uint64_t old;
     LOG("Found IDT at %llx\n", idtr.base);
 
     idt_array = (idt_64*) idtr.base;
     idt_entry = (idt_64*) &idt_array[interruption_number];
-    old_int3_gate_addr = UNPACK_HANDLER_ADDR(idt_entry);
+    old = UNPACK_HANDLER_ADDR(idt_entry);
     
     LOG("Interruption %d (0x%llx) handler is at -> 0x%llx\n", interruption_number, idt_entry, UNPACK_HANDLER_ADDR(idt_entry));
 
@@ -63,6 +65,7 @@ void overwrite_idt_gate(int interruption_number, uint64_t gate_addr)
 
     disable_safe_patch();
     
+    return old;
 }
 
 

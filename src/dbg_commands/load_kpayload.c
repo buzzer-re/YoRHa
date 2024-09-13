@@ -70,7 +70,7 @@ int kpayload_loader_executor(dbg_command_t* command, int conn)
     //
     // Exec in a separted kproc which will break inside the debugger
     //
-    kproc_create( (void (*)(void *)) exec_code, NULL, NULL, NULL, NULL, "YorhaKLoaderPayload");
+    kproc_create( (void (*)(void *)) exec_code, NULL, NULL, 0, 0, "YorhaKLoaderPayload");
 
     return YORHA_SUCCESS;
 }

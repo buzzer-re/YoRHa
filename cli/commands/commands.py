@@ -30,7 +30,6 @@ trap_frame_t = construct.Struct(
     "r13"           / construct.Int64ul,
     "r14"           / construct.Int64ul,
     "r15"           / construct.Int64ul,
-    # "error_code"    / construct.Int64ul,
     "rip"           / construct.Int64ul,
     "cs"            / construct.Int64ul,
     "eflags"        / construct.Int64ul,
@@ -60,6 +59,7 @@ class DebuggerCommandsCode:
     BREAKPOINT_REMOVE   = 8
     DBG_MEM_WRITE       = 9
     DBG_SET_THREAD_CONTEXT = 10
+    DBG_SNGLE_STEP      = 11
 
 
 

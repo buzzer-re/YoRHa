@@ -86,6 +86,7 @@ int remove_breakpoint(uint64_t* addr)
             // Remove from linked list
             //
             SLIST_REMOVE(&head, np, __breakpoint_entry, entries);
+            kfree(np, KM_TEMP);
             num_breakpoints--;
             
             return true;

@@ -1,14 +1,23 @@
 #include "../include/yorha_dbg_trap.h"
 
-
 int remote_connection;
 dbg_command_t* command;
 
+
 int yorha_dbg_main_trap_handler(trap_frame_t* ctx, dbg_command_t* cmd)
 {
+    //
+    // Remove the Trap Flag (Single Step)
+    //
+    if (ctx->eflags & TF)
+        ctx->eflags &= ~TF;
+
+    kprintf("Before handler EFLAGS -> 0x%x\n", ctx->eflags);
     command = cmd;
     __asm__("sti");
     int status = yorha_trap_command_handler(ctx);
+
+    kprintf("After handler EFLAGS -> 0x%x\n", ctx->eflags);
 
     //
     // Restore old opcode from the soft breakpoint
@@ -41,7 +50,7 @@ int yorha_trap_command_handler(trap_frame_t* ctx)
 
     int status = YORHA_SUCCESS;
     int cmd_loop = true;
-    int remote_fd_flags;
+    // int remote_fd_flags;
     struct thread* td = curthread;
     int sock = listen_port(DBG_TRAP_PORT, td, true);
 
@@ -70,11 +79,11 @@ int yorha_trap_command_handler(trap_frame_t* ctx)
         // remote_fd_flags = kfcntl(remote_connection, F_GETFL, NULL, td);
         // kfcntl(remote_connection, F_SETFL, remote_fd_flags | O_NONBLOCK, td);
 
-        kprintf("Processing command %d\n", command->header.command_type);
         
       //  STOP();
         while (true)
         {
+            kprintf("Processing command %d\n", command->header.command_type);
             switch (command->header.command_type)
             {
 
@@ -115,6 +124,11 @@ int yorha_trap_command_handler(trap_frame_t* ctx)
                     status = remove_breakpoint_executor(command, remote_connection);
                     break;
 
+                case DBG_SINGLE_STEP:
+                    status = single_step_trap_handler(command, remote_connection, ctx);
+                    cmd_loop = false;
+                    goto close;
+                    break;
                 default:
                     kprintf("Unhandled command %d\n", command->header.command_type);  
             }
