@@ -1,7 +1,8 @@
 from commands import mem_io
-from commands import pause, stop, breakpoint, continue_exec, context, kpayload_load, disas
+from commands import pause, stop, breakpoint, continue_exec, context, kpayload_load, disas, single_step
 from commands.disassembler import Disassembler
 import socket
+import time
 import argparse
 import os
 import ast
@@ -22,7 +23,8 @@ AVAILABLE_COMMANDS = {
     "breakdel"  : breakpoint.RemoveBreakpoint,
     "unload"    : None,
     "setr"      : context.SetThreadContext,
-    "load_kpayload" : kpayload_load.KPayloadLoader
+    "load_kpayload" : kpayload_load.KPayloadLoader,
+    "step"      : single_step.SingleStep
 }
 
 def hex2int_from_list(l):
@@ -123,8 +125,11 @@ class Debugger:
             "breakdel"  : self.__remove_breakpoint,
             "unload"    : self.disconnect,
             "setr"      : self.__set_thread_context,
-            "load_kpayload" : self.__load_kpayload
+            "load_kpayload" : self.__load_kpayload,
+            "step"      : self.__single_step
         }
+        self.stepping = False
+        self.old_rip = 0
 
     def connect(self, port) -> int:
         sock = socket.socket()
@@ -197,7 +202,8 @@ class Debugger:
     def launch_cmd(self, cmd, args):
         if cmd in self.dispatcher:
             if cmd != "unload":            
-                self.dispatcher[cmd](args)
+                if not self.dispatcher[cmd](args):
+                    print(f"{cmd}: Failed to execute!")
             else:
                 self.disconnect(unload_dbg=True)
                 
@@ -208,14 +214,20 @@ class Debugger:
         disas_cmd = disas.Disassemble(args.address, args.count)
         self.__send_cmd(disas_cmd, wait=True, trap_fame=self.in_dbg_context)
         
+        return True
+        
 
     def __continue(self, args):
         continue_cmd = continue_exec.Continue()
         if self.__send_cmd(continue_cmd, False, True):
             self.in_dbg_context = False
+            self.stepping = False
+            return True
+        
+        return False
 
 
-    def __memory_read(self, args) -> False:
+    def __memory_read(self, args) -> bool:
         args = parse_args(args, mem_io.MemRead.ARGUMENTS)
         if not args:
             return False
@@ -226,12 +238,17 @@ class Debugger:
         memory_read_req = mem_io.MemRead(args.address, args.count, args.output)
         self.__send_cmd(memory_read_req, True, trap_fame=self.in_dbg_context)
 
+        return True
+
 
     def __pause_debugger(self, args) -> bool:
         pause_cmd = pause.PauseDebugger()
         if self.__send_cmd(pause_cmd, False, False):
             self.in_dbg_context = True
             self.print_context()
+            return True
+        
+        return False
 
 
     def print_context(self, args = []) -> bool:
@@ -242,9 +259,19 @@ class Debugger:
             print("System is not in a paused state!")
             return
         
-        break_list = self.list_breakpoints()        
-        rip = ctx_cmd.response.trap_frame.rip
-        mem = mem_io.MemRead(rip - 1, 0x10, only_read = True)
+        break_list = self.list_breakpoints()
+        #
+        # We need the old rip to fix the disassembly output
+        # 
+        if not self.stepping:
+            rip = ctx_cmd.response.trap_frame.rip - 1 # back to the int3
+        else:
+            print("aqui")
+            rip = self.old_rip
+        
+        print(rip)
+
+        mem = mem_io.MemRead(rip, 0x10, only_read = True)
         self.__send_cmd(mem, True, trap_fame=self.in_dbg_context)
         print("\n\n")
         try:
@@ -253,13 +280,13 @@ class Debugger:
                 raw_code_bytes = list(mem.data_read)
 
                 for i, code in enumerate(mem.data_read):
-                    addr = rip - 1 + i # Minus 1 because RIP points to the next instruction
+                    addr = rip + i 
                     if addr in break_list.breakpoints_lookup:
                         raw_code_bytes[i] = break_list.breakpoints_lookup[addr].old_opcode
 
                 mem.data_read = bytearray(raw_code_bytes)
 
-            insts = self.disas.disas(mem.data_read, ctx_cmd.response.trap_frame.rip - 1)
+            insts = self.disas.disas(mem.data_read, rip)
             print("Disassembly: ")
             for inst in insts:
                 print(f"{hex(inst.address)}:\t{inst.mnemonic}\t{inst.op_str}", end=" ")
@@ -274,6 +301,9 @@ class Debugger:
         except Exception as e:
             print(bytearray(ctx_cmd.response.code))
             print(e)
+            return False
+
+        return True
 
     def __breakpoint(self, args):
         args = parse_args(args, breakpoint.BreakpointCommand.ARGUMENTS)
@@ -283,6 +313,8 @@ class Debugger:
         
         dbg_cmd = breakpoint.BreakpointCommand(args.address)
         self.__send_cmd(dbg_cmd, wait=False, trap_fame=self.in_dbg_context)
+
+        return True
     
     def __remove_breakpoint(self, args):
         args = parse_args(args, breakpoint.RemoveBreakpoint.ARGUMENTS)
@@ -292,6 +324,8 @@ class Debugger:
         
         break_del_cmd = breakpoint.RemoveBreakpoint(args.address)
         self.__send_cmd(break_del_cmd, wait=False, trap_fame=self.in_dbg_context)
+
+        return True
 
 
     def __memory_write(self, args):
@@ -307,6 +341,8 @@ class Debugger:
         dbg_cmd = mem_io.MemWrite(args.address, args.bytes, args.input)
         self.__send_cmd(dbg_cmd, wait=False, trap_fame=self.in_dbg_context)
 
+        return True
+
 
     def __set_thread_context(self, args):
         args = parse_args(args, context.SetThreadContext.ARGUMENTS)
@@ -317,7 +353,7 @@ class Debugger:
 
         if not self.__send_cmd(ctx_cmd, True, True):
             print("System is not in a paused state!")
-            return
+            return False
 
         # Copy new register values to the trap_frame struct
         for reg in ctx_cmd.response.trap_frame:
@@ -330,7 +366,8 @@ class Debugger:
 
         dbg_cmd = context.SetThreadContext(ctx_cmd.response.trap_frame)
         self.__send_cmd(dbg_cmd, wait=False, trap_fame=True)
-    
+
+        return True
 
     def __load_kpayload(self, args):
         args = parse_args(args, kpayload_load.KPayloadLoader.ARGUMENTS)
@@ -346,6 +383,30 @@ class Debugger:
             kpayload_command_req = kpayload_load.KPayloadLoader(payload_data)
             self.__send_cmd(kpayload_command_req, wait=False, trap_fame=False)
 
+        return True
+
+    def __single_step(self, args) -> bool:
+        if self.in_dbg_context:
+            #
+            # Get current thread state
+            #
+            ctx_cmd = context.DebuggerContext(quiet=True)
+            self.__send_cmd(ctx_cmd, wait=True, trap_fame=True)
+            #
+            # Enable TF flag
+            #
+            step_cmd = single_step.SingleStep()
+            self.__send_cmd(step_cmd, wait=False, trap_fame=True)
+            #
+            # Save current RIP
+            #
+            self.old_rip = ctx_cmd.response.trap_frame.rip
+            self.stepping = True # To help the capstone disassembler to decode correctly 
+            time.sleep(.1)
+            self.print_context()
+            return True
+        
+        return False
 
     def list_breakpoints(self):
         list_bp = breakpoint.ListBreakpoints()

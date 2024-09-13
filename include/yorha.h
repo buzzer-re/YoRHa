@@ -5,7 +5,7 @@
 #include "yorha_dbg_ctrl.h"
 #include "common.h"
 
-extern void (*int_breakpoint_handler)();
+extern void (*debug_int_handler)();
 extern uint64_t __get_rsp();
 extern uint64_t __get_rip();
 
@@ -13,4 +13,4 @@ extern uint64_t __get_rip();
 
 int yorha_dbg_start();
 int init_debug_server();
-void overwrite_idt_gate(int interruption_number, uint64_t gate_addr);
+uint64_t overwrite_idt_gate(int interruption_number, uint64_t gate_addr);

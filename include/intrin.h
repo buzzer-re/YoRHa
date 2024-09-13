@@ -30,6 +30,25 @@ static inline __attribute__((always_inline)) uint64_t __readcr0(void) {
   return cr0;
 }
 
+static inline __attribute__((always_inline)) uint64_t __readdr6(void) {
+    uint64_t cr0;
+    __asm__ volatile("movq %%dr6, %0"
+                    : "=r"(cr0)
+                    :
+                    : "memory");
+  return cr0;
+}
+
+static inline __attribute__((always_inline)) uint64_t __writedr6(uint64_t dr6) {
+    uint64_t cr0;
+    __asm__ volatile("movq %0, %%dr6"
+                    : "=r"(cr0)
+                    :
+                    : "memory");
+  return cr0;
+}
+
+
 static inline __attribute__((always_inline)) void __writecr0(uint64_t cr0) {
     __asm__ volatile("movq %0, %%cr0"
                     :

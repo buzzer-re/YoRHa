@@ -20,6 +20,8 @@ The currently supported commands are fairly straightforward:
 - pause
     - "Pauses" the current YorhaDBG thread to trigger the trap handler.
         - Note: The system is not entirely frozen, as some network components would not work.
+- step
+    - Perform a single-step execution (execute just one instruction) and return control to the debugger.
 
 - load_kpayload
     -  Loads a kernel payload and attach the debugger into it
@@ -159,6 +161,10 @@ With the `break` command, you can set a breakpoint at a specified memory address
 To delete a breakpoint, use the `breakdel` command with the address as an argument.
 
 
+## Single Step
+
+To perform a single step on the paused thread, use the `step` command, which internally issues the context command. You can then resume execution normally with `continue`.
+
 ## Load kernel payload
 
 You can load a kernel payload using the `load_kpayload` command with the `--path` argument, specifying the path to the payload on disk. YoRHa will load the payload and stop at its entry point, allowing you to debug it easily:
@@ -175,11 +181,6 @@ You can modify the current thread's registers using the `setr` command, specifyi
 ![](assets/setr_example.png)
 
 Any unused registers will remain unchanged.
-
-# Future features
-
-The debugger is missing a few commands, such as `single-step`, but these will be implemented in the near future. I developed all the existing commands based on my needs during reverse engineering activities and will continue to add features as required.
-
 
 # Conclusion
 

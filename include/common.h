@@ -18,3 +18,4 @@ extern int memcpy(void *dest, const void *src, size_t n);
 extern void *memset(void *s, int c, size_t n);
 #define UNUSED __attribute__((unused))
 #define INT3 0xCC
+#define TF 0x100
