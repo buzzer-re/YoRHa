@@ -62,9 +62,11 @@ def create_config() -> bool:
     
     with open(CONFIG, "w") as cfg_fd:
         new_cfg.write(cfg_fd)
+        cfg_fd.close()
 
     print(f"Configuration saved at {CONFIG} !")
 
+    return True
 
 
 def parse_config() -> ConfigParser:
