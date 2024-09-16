@@ -266,7 +266,6 @@ class Debugger:
         if not self.stepping:
             rip = ctx_cmd.response.trap_frame.rip - 1 # back to the int3
         else:
-            print("aqui")
             rip = self.old_rip
         
         print(rip)
